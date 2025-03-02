@@ -133,11 +133,14 @@ Key accomplishments:
 - Created a deployment script (scripts/deploy.js) for easier manual deployments
 - Documented the complete CI/CD setup process in CI-CD-SETUP.md
 - Created an automated setup script (scripts/setup-travis.js) to streamline the Travis CI configuration process
+- Enhanced deploy.js script to handle conflicting files between the pages/ and app/ directories
+- Successfully built the application by resolving file conflicts
+- Pushed all changes to GitHub repository for CI/CD integration
 
 Next steps:
-- Run the setup script with `npm run setup-travis`
-- Enter the GitHub and Vercel tokens when prompted
-- Push changes to GitHub to trigger the first deployment
+- Connect the repository to Vercel through the Vercel dashboard
+- Set up required environment variables in Vercel
+- Deploy the application through Vercel's GitHub integration
 
 ## Technical Notes
 - MongoDB provides better scalability for the append-heavy nature of chat data

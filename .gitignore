@@ -22,7 +22,6 @@ out/
 .env.development.local
 .env.test.local
 .env.production.local
-.env.production
 
 # Debug logs
 npm-debug.log*
@@ -97,3 +96,6 @@ server/.env
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# Environment files
+.env.production

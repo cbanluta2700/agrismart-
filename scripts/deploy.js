@@ -112,14 +112,57 @@ function handleConflictingFiles() {
 function deployToVercel() {
   console.log(`\n${colors.cyan}=== Deploying to Vercel ===${colors.reset}`);
   
-  // Check if VERCEL_TOKEN is set (for CI/CD deployment)
-  if (process.env.VERCEL_TOKEN) {
-    console.log(`${colors.green}Using VERCEL_TOKEN for authenticated deployment${colors.reset}`);
-    exec(`vercel --token ${process.env.VERCEL_TOKEN} --prod`);
-  } else {
-    // For manual deployment
-    console.log(`${colors.yellow}No VERCEL_TOKEN found, proceeding with interactive deployment${colors.reset}`);
-    exec('vercel --prod');
+  // Check if Vercel CLI is installed
+  try {
+    execSync('vercel --version', { stdio: 'pipe' });
+    
+    // Check for Vercel token
+    if (process.env.VERCEL_TOKEN) {
+      console.log(`${colors.yellow}Using VERCEL_TOKEN from environment variables for deployment${colors.reset}`);
+      
+      // Check if we have project ID
+      const projectId = process.env.VERCEL_PROJECT_ID;
+      const orgId = process.env.VERCEL_ORG_ID;
+      
+      if (projectId && orgId) {
+        console.log(`${colors.yellow}Deploying to project: ${projectId} in organization: ${orgId}${colors.reset}`);
+        
+        // Using Vercel CLI with token and project details
+        if (!exec(`vercel --token=${process.env.VERCEL_TOKEN} --prod --scope=${orgId} --confirm`)) {
+          console.error(`${colors.red}❌ Deployment with token failed${colors.reset}`);
+          
+          // Try with env file as fallback
+          console.log(`${colors.yellow}Trying deployment with .vercel/project.json configuration...${colors.reset}`);
+          if (!exec('vercel --prod')) {
+            console.error(`${colors.red}❌ Deployment failed${colors.reset}`);
+            process.exit(1);
+          }
+        }
+      } else {
+        // Just use token without project details
+        if (!exec(`vercel --token=${process.env.VERCEL_TOKEN} --prod --confirm`)) {
+          console.error(`${colors.red}❌ Deployment with token failed${colors.reset}`);
+          process.exit(1);
+        }
+      }
+    } else {
+      console.log(`${colors.yellow}No VERCEL_TOKEN found, proceeding with interactive deployment${colors.reset}`);
+      if (!exec('vercel --prod')) {
+        console.error(`${colors.red}❌ Interactive deployment failed${colors.reset}`);
+        console.error(`${colors.yellow}Try connecting to Vercel using the web interface:${colors.reset}`);
+        console.error(`${colors.blue}https://vercel.com/import/git${colors.reset}`);
+        process.exit(1);
+      }
+    }
+    
+    console.log(`${colors.green}✅ Deployment to Vercel completed successfully${colors.reset}`);
+    
+  } catch (error) {
+    console.error(`${colors.red}❌ Vercel CLI not found. Please install it with: npm i -g vercel${colors.reset}`);
+    console.log(`${colors.yellow}Alternatively, you can deploy through the Vercel dashboard:${colors.reset}`);
+    console.log(`${colors.blue}https://vercel.com/import/git${colors.reset}`);
+    console.log(`${colors.yellow}Repository: https://github.com/cbanluta2700/agrismart-.git${colors.reset}`);
+    process.exit(1);
   }
 }
 

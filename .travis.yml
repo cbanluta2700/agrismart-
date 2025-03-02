@@ -3,31 +3,29 @@ node_js:
   - 18
 
 cache:
+  npm: true
   directories:
-    - node_modules
+    - .next/cache
 
 branches:
   only:
-    - main # or your production branch
+    - main
 
 before_install:
-  - npm install -g vercel
-
-install:
-  - npm ci
+  - npm i -g vercel
 
 script:
-  - npm run lint # if you have linting
-  - npm run build # ensure your build succeeds
+  - npm run ci
 
 deploy:
   provider: script
-  script: vercel --token $VERCEL_TOKEN --prod
+  script: vercel --token $VERCEL_TOKEN --prod --scope banlutas-projects --confirm
   skip_cleanup: true
   on:
-    branch: main # or your production branch
+    branch: main
 
-notifications:
-  email:
-    on_success: change
-    on_failure: always
+env:
+  global:
+    - secure: "YOUR_ENCRYPTED_VERCEL_TOKEN"
+    - VERCEL_PROJECT_ID=prj_kfV8M6X7bG6dSZgYOOjmVAgAepr8
+    - VERCEL_ORG_ID=banlutas-projects
