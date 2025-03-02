@@ -11,19 +11,96 @@ This document guides you through deploying the AgriSmart platform using Vercel, 
 
 ## Step 1: Set Up Databases
 
-### MongoDB Atlas Setup
+### Database Configuration
 
-1. Create a MongoDB Atlas account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register)
-2. Create a free M0 cluster
-3. Set up database access with a username and password
-4. Add your IP to the IP Access List or use `0.0.0.0/0` for development
-5. Get your connection string from the "Connect" button
+#### MongoDB Configuration
 
-### Supabase (PostgreSQL) Setup
+For the AgriSmart platform, you have two options for MongoDB:
 
-1. Create a Supabase account at [Supabase](https://supabase.com/)
-2. Create a new project with a secure database password
-3. Get your connection string from Settings > Database > Connection Pooling
+#### Option 1: Use Local MongoDB (Recommended for Development)
+
+If you have MongoDB installed locally (as shown in MongoDB Compass), you can use your local instance:
+
+1. Ensure MongoDB is running locally on port 27017
+2. Set the following environment variables:
+   ```
+   MONGODB_URI=mongodb://localhost:27017
+   MONGODB_DB_NAME=agrismart_chat
+   ```
+3. Verify your local database with:
+   ```
+   npm run verify-db
+   ```
+
+#### Option 2: Use MongoDB Atlas (Recommended for Production)
+
+For production deployment, you may want to use MongoDB Atlas:
+
+1. Create a MongoDB Atlas account (available through GitHub Student Developer Pack)
+2. Create a new cluster
+3. Set up a database user with appropriate permissions
+4. Configure network access (whitelist your IP or allow access from anywhere for testing)
+5. Get your connection string from MongoDB Atlas Dashboard
+6. Set the environment variables:
+   ```
+   MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/?retryWrites=true&w=majority
+   MONGODB_DB_NAME=agrismart_chat
+   ```
+
+### PostgreSQL Configuration (via Supabase)
+
+The project uses Supabase for PostgreSQL database hosting:
+
+1. The Supabase project is already set up at:
+   - Project URL: `https://eexsqnsutjkaypilduwy.supabase.co`
+   - Project name: `nano`
+
+2. Supabase Connection Options:
+
+   a. **Transaction Pooler** (recommended for serverless/Vercel):
+   ```
+   DATABASE_URL=postgresql://postgres.eexsqnsutjkaypilduwy:YOUR_PASSWORD@aws-0-eu-central-1.pooler.supabase.com:6543/postgres
+   ```
+   - Ideal for serverless functions where each database interaction is brief
+   - Pre-warmed connection pool to PostgreSQL
+   - IPv4 compatible
+   - Does not support PREPARE statements
+
+   b. **Direct Connection** (for persistent applications):
+   ```
+   DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.eexsqnsutjkaypilduwy.supabase.co:5432/postgres
+   ```
+   - Suitable for long-lived, persistent connections
+   - Each client has a dedicated connection to PostgreSQL
+   - Not IPv4 compatible by default (requires IPv4 add-on)
+
+   c. **Session Pooler** (alternative for IPv4 networks):
+   ```
+   DATABASE_URL=postgresql://postgres.eexsqnsutjkaypilduwy:YOUR_PASSWORD@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+   ```
+   - IPv4 compatible
+   - Only recommended as an alternative to Direct Connection when on IPv4 networks
+
+3. Additional Environment Variables:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://eexsqnsutjkaypilduwy.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVleHNxbnN1dGprYXlwaWxkdXd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA2MDM4NTIsImV4cCI6MjA1NjE3OTg1Mn0.5u7nEaFkPkFXeRTR95T8NFvVzQTBgka3VPd_Lku2kI0
+   ```
+
+4. **Prisma Configuration**:
+   - For Transaction Pooler connections, Prisma might require additional configuration
+   - Add the following to your Prisma schema if needed:
+   ```prisma
+   datasource db {
+     provider  = "postgresql"
+     url       = env("DATABASE_URL")
+     directUrl = env("DIRECT_URL") // Optional direct connection for migrations
+   }
+   ```
+
+5. You can manage your database through the Supabase dashboard:
+   - Table Editor: For creating and managing tables directly
+   - SQL Editor: For more advanced database operations
 
 ## Step 2: Deploy to Vercel
 
@@ -36,7 +113,7 @@ This document guides you through deploying the AgriSmart platform using Vercel, 
    - Output Directory: `.next`
 4. Add the following environment variables:
    - `DATABASE_URL`: Your Supabase PostgreSQL connection string
-   - `MONGODB_URI`: Your MongoDB Atlas connection string
+   - `MONGODB_URI`: Your MongoDB connection string (either local or MongoDB Atlas)
    - `MONGODB_DB_NAME`: `agrismart_chat`
    - `NEXT_PUBLIC_MOCK_API_ENABLED`: `true` or `false` depending on if you want mock mode
    - `NEXT_PUBLIC_MOCK_API_URL`: URL of your mock API (if applicable)
@@ -61,6 +138,29 @@ After deployment is complete:
    ```
    npx prisma migrate deploy
    ```
+
+## Testing Database Connections
+
+To ensure your database connections are properly configured, use the following commands:
+
+### Testing MongoDB Connection
+
+```bash
+# Test all database connections (MongoDB and PostgreSQL)
+npm run verify-db
+
+# Test MongoDB Atlas connection (if using Atlas instead of local MongoDB)
+npm run test-atlas <your_mongodb_password>
+```
+
+### Testing Supabase Connection
+
+```bash
+# Test Supabase connection (requires database password)
+npm run test-supabase <your_supabase_password>
+```
+
+If all tests pass, your database connections are correctly configured and you're ready to deploy the application.
 
 ## Demo Mode Setup
 

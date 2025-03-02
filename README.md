@@ -41,12 +41,84 @@ Client-side providers are properly isolated:
 # Install dependencies
 npm install
 
+# Set up MongoDB (required for chat functionality)
+# Ensure MongoDB is running locally or update .env with MongoDB URI
+
 # Run development server
 npm run dev
 
 # Build for production
 npm run build
+
+## Hybrid Database Architecture
+
+AgriSmart implements a hybrid database architecture to optimize for different data access patterns:
+
+### PostgreSQL (via Prisma)
+- User identity and authentication
+- Farm data and profiles
+- Community content
+- Analytics and metrics
+
+### MongoDB
+- Chat conversations and messages
+- High volume, append-heavy data
+- Optimized with connection pooling for performance
+- Independent scaling from the main database
+
+### Setup Requirements
+1. Configure PostgreSQL connection in `.env`
+2. Configure MongoDB connection in `.env`:
+   ```
+   MONGODB_URI=mongodb://localhost:27017
+   MONGODB_DB_NAME=agrismart_chat
+   ```
+3. Run database migrations:
+   ```
+   npx prisma migrate dev
+   ```
+4. For migrating existing chat data from Vercel KV:
+   ```
+   node scripts/migrate-kv-to-mongodb.js
+   ```
+
+### Monitoring
+AgriSmart includes database performance monitoring tools:
+
+- API endpoint: `/api/admin/database-metrics` - Performance metrics for MongoDB and PostgreSQL operations
+- API endpoint: `/api/admin/database-status` - Connection health monitoring
+- Connection statistics via `lib/chat/mongodb.ts`
+- Performance tracking via `lib/monitoring/database-performance.js`
+
+## Testing
+
+```bash
+# Run tests
+npm run test
+
+# Database-specific tests
+node scripts/test-mongodb.js
+node scripts/test-chat-api.js
+node scripts/load-test-mongodb.js
+node scripts/test-monitoring.js
 ```
+
+## Database Architecture
+
+AgriSmart utilizes a hybrid database architecture:
+
+1. **PostgreSQL** (via Prisma):
+   - User identity and authentication
+   - Product and marketplace data
+   - Analytics and usage metrics
+   - Relational data with complex relationships
+
+2. **MongoDB**:
+   - Chat messages and conversations
+   - High-volume append-heavy data
+   - Document-based flexible schema
+
+This hybrid approach allows the platform to scale different components independently based on their specific requirements and access patterns.
 
 ## Testing Credentials
 

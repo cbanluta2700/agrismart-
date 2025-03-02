@@ -152,6 +152,16 @@ The AgriSmart application is composed of the following core components:
     - Telemetry for usage tracking and optimization
     - Error handling and logging specific to AI responses
 
+  * **Fluid Compute Optimizations**:
+    - Cold-start reduction through periodic warmup (`app/api/moderation/warmup/route.ts`)
+    - Semaphore-based concurrency control (`lib/vercel/fluid-compute.ts`)
+    - Background processing with post-response tasks
+    - Result caching with configurable TTL
+    - Optimized function configurations in `vercel.json`
+    - Specialized visualization components (`components/charts/ModerationBarChart.tsx`, `components/charts/ModerationLineChart.tsx`)
+    - Redis integration for tracking and caching
+    - Comprehensive admin dashboard (`app/admin/moderation/analytics/page.tsx`)
+
 * **Documentation:**
   * Feature overview (`docs/vercel-advanced-features-integration.md`)
   * Implementation guide (`docs/vercel-optimization-guide.md`)
@@ -322,12 +332,33 @@ The AgriSmart platform includes a comprehensive marketplace system allowing user
   * Data export capabilities
 
 * **Moderation System:**
-  * Content review and approval workflows
+  * AI-assisted content quality assessment
   * Bulk moderation capabilities for efficient content processing
   * Comprehensive notification system for moderation actions
   * Detailed moderation logs for audit purposes
   * Moderation analytics dashboard with performance metrics
-  * Integration with Vercel Analytics for enhanced insights
+  * Vercel SDK integration for analytics tracking
+  * Moderation Appeal System with database schema implementation
+
+* **Moderation Appeal System:**
+  * Appeal database schema with proper relation naming
+  * Connection to User model for both appellants and moderators
+  * Categorization of appeals with customizable types
+  * Status tracking for appeal workflow
+  * Support for evidence attachments
+  * Appeal history tracking for audit purposes
+  * Proper database indexing for query optimization
+  * Integration with notification system for status updates
+
+* **Comment Moderation System (Planned):**
+  * AI-assisted comment analysis for sentiment, toxicity, and spam detection
+  * User-facing comment reporting and flagging system
+  * Dedicated comment moderation dashboard for efficient review
+  * Bulk moderation capabilities for comment management
+  * Comment quality enhancement suggestions
+  * Integration with existing AI moderation infrastructure
+  * Performance-optimized implementation using Fluid Compute patterns
+  * Comprehensive analytics for comment moderation activities
 
 * **Vercel SDK Integration:**
   * Image optimization utilities for improved performance
@@ -344,7 +375,7 @@ The AgriSmart platform includes a comprehensive marketplace system allowing user
   * WebSocket endpoints for real-time chat
   * Analytics API for seller dashboard data
   * Authentication and authorization for secure transactions
-  * Validation using Zod schema validation
+  * Validation using Zod schema
   * Proper error handling and response formatting
   * Moderation analytics endpoints leveraging Vercel Analytics API
 
@@ -414,3 +445,66 @@ To boost development speed and efficiency, the following tools will be integrate
 *   [[Daily/]]
 *   [[Meeting Notes/]]
 * [[Obsidian Vault]]
+
+### Moderation Appeal System
+
+The Moderation Appeal System enables users to challenge content moderation decisions and allows moderators to review these appeals. The system consists of several components:
+
+1. **Appeal Submission Form**:
+   - Located in `components/moderation/AppealSubmissionForm.tsx`
+   - Allows users to submit appeals for their moderated comments
+   - Validates input using Zod schema
+   - Provides user feedback on submission status
+   - Handles rate limiting and error management
+
+2. **Appeal Review Interface**:
+   - Components:
+     - `components/admin/moderation/AppealReviewCard.tsx`: Detailed view of individual appeals
+     - `components/admin/moderation/AppealsList.tsx`: List of appeals with filtering and pagination
+     - `app/admin/moderation/appeals/page.tsx`: Admin dashboard page for appeals management
+   - Features:
+     - Status-based filtering (pending, approved, rejected)
+     - Search functionality across appeal content
+     - Pagination for large appeal volumes
+     - Detailed view with comment content and user information
+     - Approval/rejection with moderator notes
+
+3. **Backend Logic**:
+   - Located in `lib/moderation/appeals.ts`
+   - Handles appeal submission validation
+   - Processes appeals approval/rejection
+   - Manages notifications to users and moderators
+   - Tracks appeal statistics for analytics
+
+4. **API Endpoints**:
+   - `/api/comments/appeal`: Submission endpoint for users
+   - `/api/admin/appeals`: Admin endpoint for listing and filtering appeals
+   - `/api/admin/appeals/counts`: Provides counts by status
+   - `/api/admin/appeals/[appealId]/approve`: Approves an appeal and restores content
+   - `/api/admin/appeals/[appealId]/reject`: Rejects an appeal and maintains moderation
+   - `/api/user/appeals/notifications`: Retrieves appeal notifications for the authenticated user
+   - `/api/user/appeals/notifications/[notificationId]/read`: Marks a notification as read
+
+5. **Database Model**:
+   - `ModerationAppeal` model in Prisma schema
+   - Relations to User and Comment models
+   - Status tracking (PENDING, APPROVED, REJECTED)
+   - Timestamps for submission and review
+   - Storage for appeal reason and moderator notes
+   - `ModerationAppealNotification` model for tracking user notifications
+
+6. **Appeal Notification System**:
+   - Components:
+     - `components/moderation/AppealStatusNotification.tsx`: Displays individual appeal notifications
+     - `components/moderation/UserAppealsNotifications.tsx`: List view for appeal notifications
+   - Features:
+     - Real-time notifications for appeal status changes
+     - Status-based styling (pending, approved, rejected)
+     - Read/unread status tracking
+     - Integration with Vercel Notification Service
+   - Backend Logic:
+     - `createAppealStatusNotification`: Creates notifications in the database
+     - `markAppealNotificationsAsRead`: Marks notifications as read
+     - Integration with appeal lifecycle (submission, approval, rejection)
+
+The system provides a fair and transparent process for users to appeal moderation decisions while giving moderators the tools to efficiently review and respond to these appeals. The addition of the notification system ensures users are promptly informed about the status of their appeals, enhancing the overall user experience and engagement with the moderation process.

@@ -42,6 +42,10 @@
       "maxDuration": 10
     }
   },
+  "github": {
+    "enabled": true,
+    "silent": false
+  },
   "crons": [
     {
       "path": "/api/admin/database-status",
@@ -50,24 +54,19 @@
   ],
   "headers": [
     {
-      "source": "/api/forum/comments",
+      "source": "/(.*)",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "s-maxage=60, stale-while-revalidate=30"
-        },
         {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
-        }
-      ]
-    },
-    {
-      "source": "/api/admin/analytics/moderation",
-      "headers": [
+        },
         {
-          "key": "Cache-Control",
-          "value": "s-maxage=300, stale-while-revalidate=60"
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
         }
       ]
     }
@@ -77,8 +76,8 @@
     "UPSTASH_REDIS_REST_URL": "@upstash-redis-rest-url",
     "UPSTASH_REDIS_REST_TOKEN": "@upstash-redis-rest-token"
   },
-  "buildCommand": "npm run vercel-build",
-  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "regions": ["sfo1"]

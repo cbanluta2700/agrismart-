@@ -1,0 +1,83 @@
+// Comment reporting system schema updates
+// Add these models to your main schema.prisma file
+
+// Report categories for structured reporting
+model ReportCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  severity    Int      // 1-5 scale, with 5 being most severe
+  reports     Report[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// User reports on comments
+model Report {
+  id          String         @id @default(cuid())
+  commentId   String
+  comment     Comment        @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reporterId  String
+  reporter    User           @relation(fields: [reporterId], references: [id])
+  categoryId  String
+  category    ReportCategory @relation(fields: [categoryId], references: [id])
+  description String?        // Optional additional details from reporter
+  status      ReportStatus   @default(PENDING)
+  reviewerId  String?        // Moderator who reviewed this report
+  reviewer    User?          @relation("ModeratorReviews", fields: [reviewerId], references: [id])
+  reviewNote  String?        // Notes from the moderator review
+  reviewedAt  DateTime?      // When the report was reviewed
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([commentId])
+  @@index([reporterId])
+  @@index([status])
+}
+
+// Add this enum for report statuses
+enum ReportStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  DUPLICATE
+}
+
+// Add ReporterCredibility to User model
+// This can be added to your existing User model
+model User {
+  // ... existing fields
+  reporterCredibility Float      @default(0.5) // 0-1 scale of reporter reliability
+  reports             Report[]
+  moderatedReports    Report[]   @relation("ModeratorReviews")
+  // ... other existing fields
+}
+
+// Add reporting fields to Comment model
+// This can be updated in your existing Comment model
+model Comment {
+  // ... existing fields
+  reportCount   Int      @default(0)
+  reports       Report[]
+  reportedAt    DateTime?
+  moderationStatus String?   // PENDING, APPROVED, REJECTED
+  moderationReason String?
+  moderatorId   String?
+  moderatedAt   DateTime?
+  // ... other existing fields
+}
+
+// Add model for comment moderation analysis
+model CommentAnalysis {
+  id                     String           @id @default(cuid())
+  commentId              String
+  toxicityScore          Float
+  sentimentScore         Float
+  spamProbability        Float
+  categoryTags           String[]
+  moderationRecommendation String
+  confidenceScore        Float
+  createdAt              DateTime         @default(now())
+
+  @@index([commentId])
+}

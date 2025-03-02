@@ -1,226 +1,195 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { Ratelimit } from '@upstash/ratelimit';
+import { NextFetchEvent, NextRequest, NextResponse } from 'next/server';
 import { Redis } from '@upstash/redis';
-import { getModerationFeatureFlag } from '@/lib/vercel/edge-config';
-import { getCacheControlHeaders } from '@/lib/vercel/cache-control';
-import { trackModerationQueueView } from '@/lib/vercel/moderation-analytics';
+import { Ratelimit } from '@upstash/ratelimit';
+import { ProcessedModerationResult, moderateContent } from '@/lib/vercel/ai-moderation';
+import { runPostResponseTask } from '@/lib/vercel/fluid-compute';
+import { logger } from '@/lib/utils/logger';
 
-// Create a Redis client if this is used in production
+// Initialize Redis client if credentials are available
+let redis: Redis | null = null;
 let ratelimit: Ratelimit | null = null;
 
-// In production with Vercel, use their KV store instead of Upstash directly
-// This allows us to leverage Vercel's infrastructure more effectively
-if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-  const redis = new Redis({
-    url: process.env.KV_REST_API_URL,
-    token: process.env.KV_REST_API_TOKEN,
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
   });
+  
+  // Set up rate limiting
   ratelimit = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(20, '10s'),
+    limiter: Ratelimit.slidingWindow(10, '1m'),
     analytics: true,
+    prefix: 'moderation:ratelimit',
   });
 }
 
-// Map to simulate rate limiting in development
-const requestCounts = new Map<string, { count: number, resetTime: number }>();
+type ModerationContentData = {
+  content: string;
+  contentType: string;
+  userId?: string;
+  entityId?: string;
+};
 
-// Simulated rate limit function for development
-async function simulateRateLimit(identifier: string): Promise<{ success: boolean; remaining: number; reset: number }> {
-  const now = Date.now();
-  const windowSize = 10 * 1000; // 10 seconds
-  const limit = 20; // 20 requests per window
+type ModerationMiddlewareConfig = {
+  /**
+   * Function to extract content from request
+   */
+  extractContent: (req: NextRequest) => Promise<ModerationContentData | null>;
   
-  const entry = requestCounts.get(identifier) || { count: 0, resetTime: now + windowSize };
+  /**
+   * Function to handle flagged content
+   */
+  handleFlaggedContent?: (
+    req: NextRequest, 
+    result: ProcessedModerationResult,
+    content: ModerationContentData
+  ) => Promise<NextResponse | null>;
   
-  // Reset counter if the window has passed
-  if (now > entry.resetTime) {
-    entry.count = 0;
-    entry.resetTime = now + windowSize;
+  /**
+   * Whether to bypass moderation in development
+   * @default false
+   */
+  bypassInDevelopment?: boolean;
+  
+  /**
+   * Whether to track moderation decisions
+   * @default true
+   */
+  trackModerationDecisions?: boolean;
+};
+
+/**
+ * Process moderation result and handle response
+ */
+async function processModerationResult(
+  req: NextRequest,
+  contentData: ModerationContentData,
+  result: ProcessedModerationResult,
+  config: ModerationMiddlewareConfig
+): Promise<NextResponse | null> {
+  // Track moderation decision if enabled
+  if (config.trackModerationDecisions !== false && redis) {
+    try {
+      await runPostResponseTask(
+        async () => {
+          const moderationRecord = {
+            timestamp: new Date().toISOString(),
+            content: contentData.content.slice(0, 100) + (contentData.content.length > 100 ? '...' : ''),
+            contentType: contentData.contentType,
+            userId: contentData.userId || 'anonymous',
+            entityId: contentData.entityId,
+            result: {
+              isFlagged: result.isFlagged,
+              flaggedCategories: result.flaggedCategories,
+            }
+          };
+          
+          // Store in Redis with TTL
+          const key = `moderation:history:${Date.now()}`;
+          await redis!.set(key, JSON.stringify(moderationRecord));
+          await redis!.expire(key, 60 * 60 * 24 * 30); // 30 days
+          
+          // Update counter
+          await redis!.incr('moderation:count:total');
+          if (result.isFlagged) {
+            await redis!.incr('moderation:count:flagged');
+            
+            // Increment category counters
+            for (const category of result.flaggedCategories || []) {
+              await redis!.incr(`moderation:count:category:${category}`);
+            }
+          }
+        },
+        {
+          key: `track-moderation:${contentData.entityId || contentData.userId || Date.now()}`,
+          timeout: 10000, // 10 seconds
+        }
+      );
+    } catch (error) {
+      logger.error('Error tracking moderation decision', { error });
+    }
   }
   
-  entry.count += 1;
-  requestCounts.set(identifier, entry);
-  
-  return {
-    success: entry.count <= limit,
-    remaining: Math.max(0, limit - entry.count),
-    reset: entry.resetTime
-  };
-}
-
-// Function to check if user has moderation permissions
-async function hasModerationPermission(token: any): Promise<boolean> {
-  if (!token) return false;
-  
-  // Check for admin role
-  if (token.role === 'ADMIN') return true;
-  
-  // Check for moderator role
-  if (token.role === 'MODERATOR') return true;
-  
-  // Check for specific permissions in token
-  if (token.permissions && 
-      (token.permissions.includes('MODERATE_CONTENT') || 
-       token.permissions.includes('MODERATE_ALL'))) {
-    return true;
+  // If content is flagged, handle it
+  if (result.isFlagged) {
+    // Use custom handler if provided
+    if (config.handleFlaggedContent) {
+      return await config.handleFlaggedContent(req, result, contentData);
+    }
+    
+    // Default handler - return 451 Unavailable For Legal Reasons
+    const responseData = {
+      error: 'Content moderation',
+      message: 'The provided content has been flagged by our moderation system',
+      categories: result.flaggedCategories,
+    };
+    
+    return NextResponse.json(responseData, { status: 451 });
   }
   
-  return false;
+  // Content passed moderation, allow request to proceed
+  return null;
 }
 
 /**
- * Middleware specifically for moderation API routes
- * Optimized for Vercel Edge Runtime
- * Implements:
- * 1. Edge-based authorization checks
- * 2. Rate limiting
- * 3. Basic content validation
- * 4. Edge caching
- * 5. Vercel Analytics integration
+ * Create moderation middleware with provided configuration
  */
-export async function moderationMiddleware(request: NextRequest) {
-  // Apply rate limiting at the edge
-  const ip = request.ip || 'anonymous';
-  const identifier = `moderation-api-${ip}`;
-  
-  // Use real rate limit in production, simulated in development
-  const result = ratelimit 
-    ? await ratelimit.limit(identifier)
-    : await simulateRateLimit(identifier);
-  
-  // If rate limit exceeded, return 429 Too Many Requests
-  if (!result.success) {
-    return new NextResponse(
-      JSON.stringify({
-        error: 'Too many requests',
-        message: 'Rate limit exceeded. Please try again later.',
-      }),
-      {
-        status: 429,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-RateLimit-Limit': '20',
-          'X-RateLimit-Remaining': result.remaining.toString(),
-          'X-RateLimit-Reset': result.reset.toString(),
-        },
+export function createModerationMiddleware(config: ModerationMiddlewareConfig) {
+  return async function moderationMiddleware(
+    request: NextRequest,
+    event: NextFetchEvent
+  ) {
+    // Bypass moderation in development if configured
+    if (config.bypassInDevelopment && process.env.NODE_ENV === 'development') {
+      return NextResponse.next();
+    }
+    
+    // Apply rate limiting if enabled
+    if (ratelimit) {
+      const identifier = request.ip || 'anonymous';
+      const { success, limit, reset, remaining } = await ratelimit.limit(identifier);
+      
+      if (!success) {
+        return NextResponse.json(
+          { error: 'Too many requests', reset },
+          { 
+            status: 429,
+            headers: {
+              'X-RateLimit-Limit': limit.toString(),
+              'X-RateLimit-Remaining': remaining.toString(),
+              'X-RateLimit-Reset': reset.toString(),
+            }
+          }
+        );
       }
-    );
-  }
-  
-  // For POST/PUT requests, check content type and length
-  if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
-    const contentType = request.headers.get('content-type');
-    
-    // Ensure content type is JSON for moderation API
-    if (!contentType || !contentType.includes('application/json')) {
-      return new NextResponse(
-        JSON.stringify({
-          error: 'Invalid content type',
-          message: 'Content-Type must be application/json',
-        }),
-        {
-          status: 415,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
     }
     
-    // Check content length to prevent abuse
-    const contentLength = request.headers.get('content-length');
-    if (contentLength && parseInt(contentLength) > 1_000_000) { // 1MB limit
-      return new NextResponse(
-        JSON.stringify({
-          error: 'Content too large',
-          message: 'Request body exceeds maximum size of 1MB',
-        }),
-        {
-          status: 413,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+    try {
+      // Extract content from request
+      const contentData = await config.extractContent(request);
+      
+      // If no content to moderate, just proceed
+      if (!contentData || !contentData.content) {
+        return NextResponse.next();
+      }
+      
+      // Moderate the content
+      const moderationResult = await moderateContent(contentData.content, contentData.contentType);
+      
+      // Process result
+      const response = await processModerationResult(request, contentData, moderationResult, config);
+      
+      // Return custom response or proceed
+      return response || NextResponse.next();
+    } catch (error) {
+      logger.error('Error in moderation middleware', { error });
+      
+      // On error, let the request through to avoid blocking legitimate traffic
+      // In a real production system, you might want to fail closed instead
+      return NextResponse.next();
     }
-  }
-  
-  // Verify authentication and permissions
-  const token = await getToken({ req: request as any });
-  
-  // Track moderation queue views in Vercel Analytics
-  const showAnalytics = await getModerationFeatureFlag('showModerationAnalytics', true);
-  if (showAnalytics && request.nextUrl.pathname.includes('/moderation')) {
-    // Extract query params for tracking
-    const searchParams = request.nextUrl.searchParams;
-    const filterParams: Record<string, string> = {};
-    
-    searchParams.forEach((value, key) => {
-      filterParams[key] = value;
-    });
-    
-    // Track the view
-    trackModerationQueueView(filterParams);
-  }
-  
-  // For administrative moderation endpoints, require moderation permissions
-  if (request.nextUrl.pathname.startsWith('/api/admin/moderation')) {
-    const hasPermission = await hasModerationPermission(token);
-    
-    if (!token || !hasPermission) {
-      return new NextResponse(
-        JSON.stringify({
-          error: 'Unauthorized',
-          message: 'You do not have permission to access this resource',
-        }),
-        {
-          status: 403,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-    }
-  }
-  
-  // Add cache control headers for read operations
-  if (['GET', 'HEAD'].includes(request.method)) {
-    const enableEdgeCaching = await getModerationFeatureFlag('enableEdgeCaching', true);
-    
-    if (enableEdgeCaching) {
-      // Different caching strategies based on endpoint
-      const cacheDuration: 'shortTerm' | 'mediumTerm' | 'longTerm' = 
-        request.nextUrl.pathname.includes('/analytics') ? 'mediumTerm' : 'shortTerm';
-      
-      const cacheHeaders = await getCacheControlHeaders({
-        duration: cacheDuration,
-        staleWhileRevalidate: true
-      });
-      
-      // Add rate limit headers to the response
-      const response = NextResponse.next();
-      response.headers.set('X-RateLimit-Limit', '20');
-      response.headers.set('X-RateLimit-Remaining', result.remaining.toString());
-      response.headers.set('X-RateLimit-Reset', result.reset.toString());
-      
-      // Add cache headers from our cache-control utility
-      cacheHeaders.forEach((value, key) => {
-        response.headers.set(key, value);
-      });
-      
-      return response;
-    }
-  }
-  
-  // Add rate limit headers to the response
-  const response = NextResponse.next();
-  response.headers.set('X-RateLimit-Limit', '20');
-  response.headers.set('X-RateLimit-Remaining', result.remaining.toString());
-  response.headers.set('X-RateLimit-Reset', result.reset.toString());
-  
-  return response;
+  };
 }
 
 // Export config for Vercel Edge Runtime

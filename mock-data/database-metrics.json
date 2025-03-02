@@ -1,0 +1,72 @@
+{
+  "mongodb": {
+    "operationCounts": {
+      "find": 1294,
+      "insert": 177,
+      "update": 2331,
+      "delete": 436
+    },
+    "slowQueries": [
+      {
+        "operation": "insert",
+        "collection": "conversations",
+        "durationMs": 460,
+        "timestamp": "2025-03-02T11:23:48.308Z"
+      },
+      {
+        "operation": "aggregate",
+        "collection": "users",
+        "durationMs": 288,
+        "timestamp": "2025-03-02T20:35:44.139Z"
+      },
+      {
+        "operation": "find",
+        "collection": "messages",
+        "durationMs": 637,
+        "timestamp": "2025-03-02T12:49:19.377Z"
+      }
+    ],
+    "responseTimes": {
+      "p50": 26,
+      "p90": 47,
+      "p99": 147
+    },
+    "connectionPoolStats": {
+      "totalConnections": 9,
+      "availableConnections": 3,
+      "inUseConnections": 1
+    }
+  },
+  "postgresql": {
+    "operationCounts": {
+      "select": 2977,
+      "insert": 647,
+      "update": 881,
+      "delete": 460
+    },
+    "slowQueries": [
+      {
+        "operation": "UPDATE",
+        "table": "orders",
+        "durationMs": 562,
+        "timestamp": "2025-03-02T17:12:30.731Z"
+      },
+      {
+        "operation": "INSERT",
+        "table": "products",
+        "durationMs": 603,
+        "timestamp": "2025-03-02T10:42:12.493Z"
+      }
+    ],
+    "responseTimes": {
+      "p50": 6,
+      "p90": 46,
+      "p99": 113
+    },
+    "connectionStats": {
+      "totalConnections": 4,
+      "idleConnections": 1,
+      "activeConnections": 0
+    }
+  }
+}

@@ -1,357 +1,263 @@
-import { wrapLanguageModel, LanguageModelV1Middleware } from '@ai-sdk/core';
-import { z } from 'zod';
+/**
+ * AI-powered content moderation using OpenAI's moderation API
+ * Supports automatic moderation of text content
+ */
+import { Redis } from '@upstash/redis';
+import { OpenAI } from 'openai';
+import { fluidCompute, runPostResponseTask } from './fluid-compute';
 import { logger } from '@/lib/utils/logger';
-import { trackModerationAction } from './moderation-analytics';
-import { cleanCache } from './cache-control';
+
+// Initialize Redis client if credentials are available
+let redis: Redis | null = null;
+
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  redis = new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  });
+}
+
+// Initialize OpenAI client if credentials are available
+let openai: OpenAI | null = null;
+
+if (process.env.OPENAI_API_KEY) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 /**
- * AI content moderation configuration
+ * Categories for moderation
  */
-export interface AIModerationConfig {
-  /**
-   * Moderation sensitivity level (0-1)
-   * - 0: Less sensitive (allows more content through)
-   * - 1: Highly sensitive (stricter moderation)
-   */
-  sensitivityLevel?: number;
-  
-  /**
-   * Categories to check for moderation
-   */
-  categories?: string[];
-  
-  /**
-   * Whether to track moderation decisions in analytics
-   */
-  trackAnalytics?: boolean;
-  
-  /**
-   * User ID for analytics tracking
-   */
+export type ModerationCategory = 
+  | 'hate'
+  | 'harassment'
+  | 'self-harm'
+  | 'sexual'
+  | 'violent'
+  | 'graphic';
+
+/**
+ * Moderation result from AI service
+ */
+export interface ModerationResult {
+  isFlagged: boolean;
+  categories: Record<string, boolean>;
+  categoryScores: Record<string, number>;
+  flaggedCategories: ModerationCategory[];
+}
+
+/**
+ * Processed moderation result with additional data
+ */
+export interface ProcessedModerationResult extends ModerationResult {
+  timestamp: string;
+  id: string;
+  confidence: number;
+}
+
+/**
+ * Decision tracking data
+ */
+export interface ModerationDecisionTrackingData {
+  id: string;
+  timestamp: string;
+  content: string;
+  isFlagged: boolean;
+  flaggedCategories: ModerationCategory[];
+  contentType: string;
   userId?: string;
-  
-  /**
-   * Content ID for analytics tracking
-   */
-  contentId?: string;
+  confidence: number;
 }
 
 /**
- * Default moderation categories to check
+ * Fluid compute optimized moderation function
+ * Includes caching and concurrency control
  */
-const DEFAULT_MODERATION_CATEGORIES = [
-  'hate',
-  'harassment',
-  'sexual',
-  'self-harm',
-  'violence'
-];
-
-/**
- * Schema for moderation result
- */
-const moderationResultSchema = z.object({
-  isFlagged: z.boolean(),
-  categories: z.record(z.boolean()).optional(),
-  categoryScores: z.record(z.number()).optional(),
-  flaggedCategories: z.array(z.string()).optional()
-});
-
-type ModerationResult = z.infer<typeof moderationResultSchema>;
-
-/**
- * Creates an AI moderation middleware that can be used with any language model
- * to add content moderation capabilities
- */
-export function createModerationMiddleware(config: AIModerationConfig = {}): LanguageModelV1Middleware {
-  const sensitivityLevel = config.sensitivityLevel ?? 0.7;
-  const categories = config.categories ?? DEFAULT_MODERATION_CATEGORIES;
-  const trackingEnabled = config.trackAnalytics ?? true;
-  
-  return {
-    /**
-     * Middleware to check content before generation
-     */
-    transformParams: async ({ params }) => {
-      // Extract text to check from the prompt parameter
-      let textToCheck = '';
-      
-      if (typeof params.prompt === 'string') {
-        textToCheck = params.prompt;
-      } else if (Array.isArray(params.prompt)) {
-        // Extract the last user message for moderation check
-        const userMessages = params.prompt.filter(
-          msg => typeof msg === 'string' || (typeof msg === 'object' && msg.role === 'user')
-        );
-        
-        if (userMessages.length > 0) {
-          const lastUserMessage = userMessages[userMessages.length - 1];
-          if (typeof lastUserMessage === 'string') {
-            textToCheck = lastUserMessage;
-          } else if (typeof lastUserMessage === 'object' && lastUserMessage.content) {
-            textToCheck = typeof lastUserMessage.content === 'string' 
-              ? lastUserMessage.content
-              : JSON.stringify(lastUserMessage.content);
-          }
-        }
-      }
-      
-      if (!textToCheck.trim()) {
-        // No text to check, proceed as normal
-        return params;
-      }
-      
-      try {
-        // Check content using the moderation function
-        const result = await moderateContent(textToCheck, sensitivityLevel, categories);
-        
-        if (result.isFlagged) {
-          // Track the moderation action if tracking is enabled
-          if (trackingEnabled && config.contentId) {
-            await trackModerationAction({
-              contentId: config.contentId,
-              action: 'blocked',
-              reason: result.flaggedCategories?.join(', ') || 'policy_violation',
-              userId: config.userId,
-              automated: true,
-              source: 'ai-moderation'
-            });
-          }
-          
-          // Throw error to prevent the content from being processed
-          throw new Error(
-            `Content was flagged for moderation due to: ${result.flaggedCategories?.join(', ') || 'policy violation'}`
-          );
-        }
-        
-        // Content passed moderation, continue as normal
-        return params;
-      } catch (error) {
-        if ((error as Error).message.includes('flagged for moderation')) {
-          // Propagate moderation errors
-          throw error;
-        }
-        
-        // Log other errors but don't block the request
-        logger.error('Error in AI moderation middleware', { error });
-        
-        // Continue with the original parameters
-        return params;
-      }
-    },
-    
-    /**
-     * Post-processing middleware to check generated content
-     */
-    wrapGenerate: async ({ doGenerate, params }) => {
-      const result = await doGenerate();
-      
-      if (!result.text?.trim()) {
-        return result;
-      }
-      
-      try {
-        // Check the generated content using the moderation function
-        const moderationResult = await moderateContent(
-          result.text, 
-          sensitivityLevel, 
-          categories
-        );
-        
-        if (moderationResult.isFlagged) {
-          // Track the moderation action if tracking is enabled
-          if (trackingEnabled && config.contentId) {
-            await trackModerationAction({
-              contentId: config.contentId,
-              action: 'blocked',
-              reason: moderationResult.flaggedCategories?.join(', ') || 'policy_violation',
-              userId: config.userId,
-              automated: true,
-              source: 'ai-moderation-output'
-            });
-          }
-          
-          // Return a sanitized response
-          return {
-            ...result,
-            text: '[Content removed due to policy violation]'
-          };
-        }
-        
-        return result;
-      } catch (error) {
-        // Log errors but don't block the response
-        logger.error('Error in AI moderation output check', { error });
-        
-        // Return the original result
-        return result;
-      }
-    }
-  };
-}
-
-/**
- * Helper function to check content for policy violations
- * This is a placeholder implementation that can be replaced with actual moderation API calls
- */
-async function moderateContent(
-  text: string, 
-  sensitivityLevel: number = 0.7,
-  categoriesToCheck: string[] = DEFAULT_MODERATION_CATEGORIES
-): Promise<ModerationResult> {
-  // Simulation mode for development (will be replaced with actual API calls)
-  const SIMULATED_MODE = process.env.NODE_ENV === 'development' && !process.env.OPENAI_API_KEY;
-  
-  if (SIMULATED_MODE) {
-    // Simulate moderation in development
-    const containsObviousProfanity = /\b(fuck|shit|ass|damn|bitch)\b/i.test(text);
-    
-    if (containsObviousProfanity) {
+export const moderateContent = fluidCompute(
+  async (content: string, contentType: string = 'text'): Promise<ProcessedModerationResult> => {
+    // Check if OpenAI client is available
+    if (!openai) {
+      logger.error('OpenAI client not initialized');
+      // Return a non-flagged response when OpenAI is unavailable
       return {
-        isFlagged: true,
-        categories: { hate: false, harassment: true, sexual: false, 'self-harm': false, violence: false },
-        categoryScores: { hate: 0.1, harassment: 0.8, sexual: 0.1, 'self-harm': 0, violence: 0.1 },
-        flaggedCategories: ['harassment']
+        isFlagged: false,
+        categories: {
+          hate: false,
+          harassment: false,
+          'self-harm': false,
+          sexual: false,
+          violent: false,
+          graphic: false
+        },
+        categoryScores: {
+          hate: 0,
+          harassment: 0,
+          'self-harm': 0,
+          sexual: 0,
+          violent: 0,
+          graphic: 0
+        },
+        flaggedCategories: [],
+        timestamp: new Date().toISOString(),
+        id: `fallback-${Date.now()}`,
+        confidence: 0
       };
     }
     
-    return {
-      isFlagged: false,
-      categories: { hate: false, harassment: false, sexual: false, 'self-harm': false, violence: false },
-      categoryScores: { hate: 0.1, harassment: 0.1, sexual: 0.1, 'self-harm': 0, violence: 0.1 }
-    };
-  }
-  
-  // If OpenAI API key is available, use the OpenAI moderation API
-  if (process.env.OPENAI_API_KEY) {
     try {
-      // This would be implemented using OpenAI's moderation API
-      // For now, we'll mock the implementation
-      const containsObviousProfanity = /\b(fuck|shit|ass|damn|bitch)\b/i.test(text);
+      // Call OpenAI's moderation API
+      const response = await openai.moderations.create({
+        input: content
+      });
       
-      if (containsObviousProfanity) {
-        return {
-          isFlagged: true,
-          categories: { hate: false, harassment: true, sexual: false, 'self-harm': false, violence: false },
-          categoryScores: { hate: 0.1, harassment: 0.8, sexual: 0.1, 'self-harm': 0, violence: 0.1 },
-          flaggedCategories: ['harassment']
-        };
-      }
+      const result = response.results[0];
       
+      // Extract flagged categories
+      const flaggedCategories: ModerationCategory[] = Object.keys(result.categories)
+        .filter(key => result.categories[key as keyof typeof result.categories])
+        .map(key => key as ModerationCategory);
+      
+      // Return processed result
       return {
-        isFlagged: false,
-        categories: { hate: false, harassment: false, sexual: false, 'self-harm': false, violence: false },
-        categoryScores: { hate: 0.1, harassment: 0.1, sexual: 0.1, 'self-harm': 0, violence: 0.1 }
+        isFlagged: result.flagged,
+        categories: result.categories as Record<string, boolean>,
+        categoryScores: result.category_scores as Record<string, number>,
+        flaggedCategories,
+        timestamp: new Date().toISOString(),
+        id: response.id,
+        confidence: Math.max(...Object.values(result.category_scores))
       };
     } catch (error) {
       logger.error('Error calling OpenAI moderation API', { error });
       
-      // In case of error, be conservative and don't flag the content
+      // Fallback to a simple check for known offensive terms
+      const sensitiveTerms = [
+        'offensive', 'racist', 'sexist', 'hate', 'kill', 'explicit'
+      ];
+      
+      const lowerContent = content.toLowerCase();
+      const foundTerms = sensitiveTerms.filter(term => lowerContent.includes(term));
+      const isFlagged = foundTerms.length > 0;
+      
+      // Create a manual moderation result with limited info
       return {
-        isFlagged: false,
-        categories: {},
-        categoryScores: {}
+        isFlagged,
+        categories: {
+          hate: lowerContent.includes('hate') || lowerContent.includes('racist'),
+          harassment: lowerContent.includes('offensive') || lowerContent.includes('sexist'),
+          'self-harm': false,
+          sexual: lowerContent.includes('explicit'),
+          violent: lowerContent.includes('kill'),
+          graphic: false
+        },
+        categoryScores: {
+          hate: lowerContent.includes('hate') || lowerContent.includes('racist') ? 0.8 : 0,
+          harassment: lowerContent.includes('offensive') || lowerContent.includes('sexist') ? 0.8 : 0,
+          'self-harm': 0,
+          sexual: lowerContent.includes('explicit') ? 0.8 : 0,
+          violent: lowerContent.includes('kill') ? 0.8 : 0,
+          graphic: 0
+        },
+        flaggedCategories: foundTerms.length > 0 ? ['harassment'] : [],
+        timestamp: new Date().toISOString(),
+        id: `fallback-${Date.now()}`,
+        confidence: foundTerms.length > 0 ? 0.7 : 0
       };
     }
+  },
+  {
+    keyPrefix: 'ai-moderation',
+    concurrency: 10,
+    cacheTTL: 3600, // Cache for 1 hour
+    keepWarm: true,
+  }
+);
+
+/**
+ * Track moderation decision in background
+ */
+export async function trackModerationDecision(
+  data: Omit<ModerationDecisionTrackingData, 'timestamp'>
+): Promise<void> {
+  // Skip if Redis is not available
+  if (!redis) {
+    logger.warn('Redis not available for tracking moderation decision');
+    return;
   }
   
-  // Implement a basic keyword-based check as fallback
-  const sensitiveKeywords: Record<string, RegExp> = {
-    hate: /\b(hate|racist|bigot)\b/i,
-    harassment: /\b(harass|bully|threaten)\b/i,
-    sexual: /\b(sex|porn|nude|explicit)\b/i,
-    'self-harm': /\b(suicide|kill myself|self harm|cut myself)\b/i,
-    violence: /\b(kill|murder|attack|bomb|shoot)\b/i
-  };
-  
-  const results: Record<string, boolean> = {};
-  const scores: Record<string, number> = {};
-  const flaggedCategories: string[] = [];
-  
-  for (const category of categoriesToCheck) {
-    if (sensitiveKeywords[category] && sensitiveKeywords[category].test(text)) {
-      results[category] = true;
-      scores[category] = 0.8; // Simulate a high confidence score
-      flaggedCategories.push(category);
-    } else {
-      results[category] = false;
-      scores[category] = 0.1; // Simulate a low confidence score
+  await runPostResponseTask(
+    async () => {
+      const trackingData: ModerationDecisionTrackingData = {
+        ...data,
+        timestamp: new Date().toISOString(),
+      };
+      
+      try {
+        // Store decision in Redis
+        const key = `moderation:decision:${data.id}`;
+        await redis!.set(key, JSON.stringify(trackingData));
+        await redis!.expire(key, 60 * 60 * 24 * 30); // 30 days TTL
+        
+        // Update counters
+        await redis!.incr('moderation:stats:total');
+        
+        if (data.isFlagged) {
+          await redis!.incr('moderation:stats:flagged');
+          
+          // Track by category
+          for (const category of data.flaggedCategories) {
+            await redis!.incr(`moderation:stats:category:${category}`);
+          }
+        }
+        
+        // Track by content type
+        await redis!.incr(`moderation:stats:type:${data.contentType}`);
+        
+        // Add to recent list (limited to 1000 entries)
+        await redis!.lpush('moderation:recent', JSON.stringify({
+          id: data.id,
+          timestamp: trackingData.timestamp,
+          flagged: data.isFlagged,
+          categories: data.flaggedCategories,
+          contentType: data.contentType,
+        }));
+        await redis!.ltrim('moderation:recent', 0, 999);
+        
+        logger.info('Tracked moderation decision', { id: data.id, flagged: data.isFlagged });
+      } catch (error) {
+        logger.error('Error tracking moderation decision', { error, id: data.id });
+      }
+    },
+    {
+      key: `track-moderation:${data.id}`,
+      timeout: 10000, // 10 seconds
     }
-  }
-  
-  return {
-    isFlagged: flaggedCategories.length > 0,
-    categories: results,
-    categoryScores: scores,
-    flaggedCategories
-  };
+  );
 }
 
 /**
- * Apply AI moderation to any language model
+ * Get moderation statistics
  */
-export function applyAIModeration(model: any, config: AIModerationConfig = {}) {
-  const middleware = createModerationMiddleware(config);
-  return wrapLanguageModel(model, middleware);
-}
-
-/**
- * Add a comment to the moderation queue manually
- */
-export async function queueCommentForModeration(params: {
-  contentId: string;
-  content: string;
-  userId?: string;
-  reason?: string;
-}) {
-  const { contentId, content, userId, reason } = params;
+export async function getModerationStats(): Promise<Record<string, number> | null> {
+  // Skip if Redis is not available
+  if (!redis) return null;
   
   try {
-    // Moderate the content
-    const result = await moderateContent(content);
+    const stats = {
+      total: Number(await redis.get('moderation:stats:total') || 0),
+      flagged: Number(await redis.get('moderation:stats:flagged') || 0),
+    };
     
-    if (result.isFlagged) {
-      // Automatically flag the content
-      await trackModerationAction({
-        contentId,
-        action: 'flagged',
-        reason: result.flaggedCategories?.join(', ') || reason || 'policy_violation',
-        userId,
-        automated: true,
-        source: 'ai-moderation'
-      });
-      
-      // Invalidate any related caches
-      await cleanCache(`content:${contentId}`);
-      
-      return {
-        moderated: true,
-        flagged: true,
-        categories: result.flaggedCategories
-      };
+    // Get category stats
+    const categories: ModerationCategory[] = ['hate', 'harassment', 'self-harm', 'sexual', 'violent', 'graphic'];
+    for (const category of categories) {
+      stats[`category:${category}`] = Number(await redis.get(`moderation:stats:category:${category}`) || 0);
     }
     
-    // Content passed automatic checks, but still add to moderation queue for manual review
-    await trackModerationAction({
-      contentId,
-      action: 'queued',
-      reason: reason || 'routine_check',
-      userId,
-      automated: false,
-      source: 'system'
-    });
-    
-    return {
-      moderated: true,
-      flagged: false
-    };
+    return stats;
   } catch (error) {
-    logger.error('Error queuing comment for moderation', { error, contentId });
-    
-    // Handle errors gracefully
-    return {
-      moderated: false,
-      error: 'Failed to process moderation request'
-    };
+    logger.error('Error getting moderation stats', { error });
+    return null;
   }
 }

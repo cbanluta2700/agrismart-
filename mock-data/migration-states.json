@@ -1,0 +1,281 @@
+{
+  "idle": {
+    "status": "idle",
+    "progress": {
+      "totalConversations": 0,
+      "processed": 0,
+      "successful": 0,
+      "failed": 0,
+      "skipped": 0,
+      "currentBatch": 0,
+      "totalBatches": 0,
+      "elapsedTime": 0,
+      "estimatedTimeRemaining": null,
+      "speed": 0
+    },
+    "error": null,
+    "logs": [],
+    "startTime": null,
+    "endTime": null,
+    "errorSummary": {},
+    "failedConversations": [],
+    "config": {
+      "batchSize": 50,
+      "restartFromScratch": true,
+      "logVerbosity": "normal"
+    },
+    "jobId": null
+  },
+  "running": {
+    "status": "running",
+    "progress": {
+      "totalConversations": 1000,
+      "processed": 350,
+      "successful": 320,
+      "failed": 15,
+      "skipped": 15,
+      "currentBatch": 7,
+      "totalBatches": 20,
+      "elapsedTime": 120000,
+      "estimatedTimeRemaining": 180000,
+      "speed": 2.92
+    },
+    "error": null,
+    "logs": [
+      "Migration started",
+      "Connected to MongoDB successfully",
+      "Connected to Vercel KV successfully",
+      "Found 1000 conversations in Vercel KV",
+      "Processing batch 1/20 (50 conversations)",
+      "Completed batch 1/20 - Migrated: 48, Skipped: 1, Errors: 1",
+      "Processing batch 2/20 (50 conversations)",
+      "Completed batch 2/20 - Migrated: 45, Skipped: 2, Errors: 3",
+      "Processing batch 3/20 (50 conversations)",
+      "Completed batch 3/20 - Migrated: 47, Skipped: 2, Errors: 1",
+      "Processing batch 4/20 (50 conversations)",
+      "Completed batch 4/20 - Migrated: 49, Skipped: 1, Errors: 0",
+      "Processing batch 5/20 (50 conversations)",
+      "Completed batch 5/20 - Migrated: 46, Skipped: 3, Errors: 1",
+      "Processing batch 6/20 (50 conversations)",
+      "Completed batch 6/20 - Migrated: 48, Skipped: 1, Errors: 1",
+      "Processing batch 7/20 (50 conversations)"
+    ],
+    "startTime": "2025-03-02T21:58:03.393Z",
+    "endTime": null,
+    "errorSummary": {
+      "CONNECTION_ERROR": 5,
+      "VALIDATION_ERROR": 3,
+      "FORMAT_ERROR": 2,
+      "MISSING_FIELD": 4,
+      "DUPLICATE_KEY": 1
+    },
+    "failedConversations": [
+      "c036250a-5631-438e-b1c0-f00ecf72f5de",
+      "7d62d088-d070-485c-bacd-238b7b602708",
+      "8025cb26-c5f4-4d41-8996-99bac34ed40d",
+      "3e7e64d4-c7ad-43ad-9850-6dba6d3eb5dd",
+      "2b06d548-743b-40f2-a178-abb0c9942b3e",
+      "d019c3a1-285c-45a7-89b6-4fb31028c148",
+      "090da991-b1ae-4cbe-91fa-b4d77de0741d",
+      "4a8626d9-9c17-46f0-bfb1-5a526d1e900b",
+      "fb5d94e5-7822-437b-a0ae-a1f840e26459",
+      "89494275-9c9a-4ce5-9982-8a6b4a0b9a8b",
+      "e9421c98-3494-46a5-a331-bdc5738c3f33",
+      "0d99f4a4-0636-4df7-bec0-af4659ccf26b",
+      "74fb824d-1e3d-498f-8386-b226f8646c65",
+      "c5e0a842-b066-4f53-8aef-460e8e168fdc",
+      "f1e8e2fb-805b-4478-9401-5ce2e037da49"
+    ],
+    "config": {
+      "batchSize": 50,
+      "restartFromScratch": true,
+      "logVerbosity": "normal"
+    },
+    "jobId": "09b88187-4e65-447d-aa28-9a82367aab4d"
+  },
+  "completed": {
+    "status": "completed",
+    "progress": {
+      "totalConversations": 1000,
+      "processed": 1000,
+      "successful": 960,
+      "failed": 15,
+      "skipped": 25,
+      "currentBatch": 20,
+      "totalBatches": 20,
+      "elapsedTime": 300000,
+      "estimatedTimeRemaining": 0,
+      "speed": 3.33
+    },
+    "error": null,
+    "logs": [
+      "Migration started",
+      "Connected to MongoDB successfully",
+      "Connected to Vercel KV successfully",
+      "Found 1000 conversations in Vercel KV",
+      "Processing batch 1/20 (50 conversations)",
+      "Completed batch 1/20 - Migrated: 48, Skipped: 1, Errors: 1",
+      "Processing batch 20/20 (50 conversations)",
+      "Completed batch 20/20 - Migrated: 49, Skipped: 1, Errors: 0",
+      "Migration completed successfully",
+      "Total time: 5 minutes 0 seconds",
+      "Total conversations: 1000",
+      "Successfully migrated: 960",
+      "Skipped: 25",
+      "Errors: 15"
+    ],
+    "startTime": "2025-03-02T21:55:03.393Z",
+    "endTime": "2025-03-02T22:00:03.393Z",
+    "errorSummary": {
+      "CONNECTION_ERROR": 5,
+      "VALIDATION_ERROR": 3,
+      "FORMAT_ERROR": 2,
+      "MISSING_FIELD": 4,
+      "DUPLICATE_KEY": 1
+    },
+    "failedConversations": [
+      "c036250a-5631-438e-b1c0-f00ecf72f5de",
+      "7d62d088-d070-485c-bacd-238b7b602708",
+      "8025cb26-c5f4-4d41-8996-99bac34ed40d",
+      "3e7e64d4-c7ad-43ad-9850-6dba6d3eb5dd",
+      "2b06d548-743b-40f2-a178-abb0c9942b3e",
+      "d019c3a1-285c-45a7-89b6-4fb31028c148",
+      "090da991-b1ae-4cbe-91fa-b4d77de0741d",
+      "4a8626d9-9c17-46f0-bfb1-5a526d1e900b",
+      "fb5d94e5-7822-437b-a0ae-a1f840e26459",
+      "89494275-9c9a-4ce5-9982-8a6b4a0b9a8b",
+      "e9421c98-3494-46a5-a331-bdc5738c3f33",
+      "0d99f4a4-0636-4df7-bec0-af4659ccf26b",
+      "74fb824d-1e3d-498f-8386-b226f8646c65",
+      "c5e0a842-b066-4f53-8aef-460e8e168fdc",
+      "f1e8e2fb-805b-4478-9401-5ce2e037da49"
+    ],
+    "config": {
+      "batchSize": 50,
+      "restartFromScratch": true,
+      "logVerbosity": "normal"
+    },
+    "jobId": "5ed9e606-6a44-4421-80af-c276cd910943"
+  },
+  "error": {
+    "status": "error",
+    "progress": {
+      "totalConversations": 1000,
+      "processed": 425,
+      "successful": 390,
+      "failed": 20,
+      "skipped": 15,
+      "currentBatch": 9,
+      "totalBatches": 20,
+      "elapsedTime": 180000,
+      "estimatedTimeRemaining": null,
+      "speed": 2.36
+    },
+    "error": {
+      "message": "Database connection lost during migration",
+      "code": "ERR_MONGODB_CONNECTION_LOST",
+      "stack": "Error: Database connection lost during migration\n    at MigrationWorker.processBatch (file:///scripts/migrate-kv-to-mongodb.js:245:23)\n    at async MigrationWorker.run (file:///scripts/migrate-kv-to-mongodb.js:120:10)"
+    },
+    "logs": [
+      "Migration started",
+      "Connected to MongoDB successfully",
+      "Connected to Vercel KV successfully",
+      "Found 1000 conversations in Vercel KV",
+      "Processing batch 1/20 (50 conversations)",
+      "Completed batch 1/20 - Migrated: 48, Skipped: 1, Errors: 1",
+      "Processing batch 9/20 (50 conversations)",
+      "ERROR: Database connection lost during migration",
+      "Migration failed: ERR_MONGODB_CONNECTION_LOST"
+    ],
+    "startTime": "2025-03-02T21:57:03.393Z",
+    "endTime": "2025-03-02T22:00:03.393Z",
+    "errorSummary": {
+      "CONNECTION_ERROR": 10,
+      "VALIDATION_ERROR": 3,
+      "FORMAT_ERROR": 2,
+      "MISSING_FIELD": 4,
+      "DUPLICATE_KEY": 1
+    },
+    "failedConversations": [
+      "c036250a-5631-438e-b1c0-f00ecf72f5de",
+      "7d62d088-d070-485c-bacd-238b7b602708",
+      "8025cb26-c5f4-4d41-8996-99bac34ed40d",
+      "3e7e64d4-c7ad-43ad-9850-6dba6d3eb5dd",
+      "2b06d548-743b-40f2-a178-abb0c9942b3e",
+      "d019c3a1-285c-45a7-89b6-4fb31028c148",
+      "090da991-b1ae-4cbe-91fa-b4d77de0741d",
+      "4a8626d9-9c17-46f0-bfb1-5a526d1e900b",
+      "fb5d94e5-7822-437b-a0ae-a1f840e26459",
+      "89494275-9c9a-4ce5-9982-8a6b4a0b9a8b",
+      "e9421c98-3494-46a5-a331-bdc5738c3f33",
+      "0d99f4a4-0636-4df7-bec0-af4659ccf26b",
+      "74fb824d-1e3d-498f-8386-b226f8646c65",
+      "c5e0a842-b066-4f53-8aef-460e8e168fdc",
+      "f1e8e2fb-805b-4478-9401-5ce2e037da49",
+      "3c64d1e3-9dc0-49f8-87b1-d3fe995c0228",
+      "8021a1db-4b1e-4e09-ab38-d91054ed7b6b",
+      "5ee3f4d6-d4ef-417d-8229-1b451c9f7b75",
+      "ec8f80d3-bcf5-41d3-9fdd-1fc184bd09f5",
+      "2e231df8-8806-4614-bc10-d0198b999643"
+    ],
+    "config": {
+      "batchSize": 50,
+      "restartFromScratch": true,
+      "logVerbosity": "verbose"
+    },
+    "jobId": "bfe972cb-94dc-4a05-9e68-e7975e1588fc"
+  },
+  "cancelled": {
+    "status": "cancelled",
+    "progress": {
+      "totalConversations": 1000,
+      "processed": 550,
+      "successful": 520,
+      "failed": 10,
+      "skipped": 20,
+      "currentBatch": 11,
+      "totalBatches": 20,
+      "elapsedTime": 240000,
+      "estimatedTimeRemaining": null,
+      "speed": 2.29
+    },
+    "error": null,
+    "logs": [
+      "Migration started",
+      "Connected to MongoDB successfully",
+      "Connected to Vercel KV successfully",
+      "Found 1000 conversations in Vercel KV",
+      "Processing batch 1/20 (50 conversations)",
+      "Completed batch 1/20 - Migrated: 48, Skipped: 1, Errors: 1",
+      "Processing batch 11/20 (50 conversations)",
+      "Migration cancelled by administrator"
+    ],
+    "startTime": "2025-03-02T21:56:03.393Z",
+    "endTime": "2025-03-02T22:00:03.393Z",
+    "errorSummary": {
+      "CONNECTION_ERROR": 3,
+      "VALIDATION_ERROR": 2,
+      "FORMAT_ERROR": 1,
+      "MISSING_FIELD": 3,
+      "DUPLICATE_KEY": 1
+    },
+    "failedConversations": [
+      "cd041d46-f212-419d-8fcd-3ad4a8dc70f2",
+      "2b1cd0b5-b38f-469b-a479-c9e938c78aea",
+      "39694164-70f4-4722-9555-b06fa42114f9",
+      "fa0b802e-f4ab-4c92-b03c-f4e209ca3fe7",
+      "cf6d8ac4-9a45-4cdf-9d38-1dc1d492ceec",
+      "b2a89472-adfb-4ba2-83a7-041b0777ed5a",
+      "b0dbeac7-7367-4d1e-965a-937f1e6429d0",
+      "e8280ecb-9e47-460d-bbf1-1540efc05972",
+      "a9aa533b-1cd2-458e-b128-e769a39e9b4e",
+      "2823d436-d361-44ed-b1ac-f62f23d23b12"
+    ],
+    "config": {
+      "batchSize": 50,
+      "restartFromScratch": true,
+      "logVerbosity": "normal"
+    },
+    "jobId": "4b6a9234-4a27-4c50-a1ac-8f1a0adf7ce5"
+  }
+}

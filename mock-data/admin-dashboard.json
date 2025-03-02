@@ -1,0 +1,37 @@
+{
+  "usersCount": 1240,
+  "activeSessions": 53,
+  "conversationsToday": 227,
+  "avgResponseTime": 1.6397035552077532,
+  "serverLoad": {
+    "cpu": 35,
+    "memory": 39,
+    "disk": 64
+  },
+  "recentErrors": [
+    {
+      "timestamp": "2025-03-02T10:28:07.123Z",
+      "error": "Error during operation",
+      "component": "database",
+      "severity": "medium"
+    },
+    {
+      "timestamp": "2025-03-02T00:12:33.496Z",
+      "error": "Error during operation",
+      "component": "database",
+      "severity": "high"
+    },
+    {
+      "timestamp": "2025-03-01T22:37:21.700Z",
+      "error": "Error during operation",
+      "component": "chat",
+      "severity": "medium"
+    },
+    {
+      "timestamp": "2025-03-02T17:04:18.794Z",
+      "error": "Error during operation",
+      "component": "chat",
+      "severity": "low"
+    }
+  ]
+}

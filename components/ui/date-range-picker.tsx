@@ -130,3 +130,6 @@ export function CalendarDateRangePicker({
     </div>
   );
 }
+
+// Export an alias for easier imports
+export const DateRangePicker = CalendarDateRangePicker;

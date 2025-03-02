@@ -3,8 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // For use with Supabase and other connection poolers
+  // directUrl will be used for database migrations when direct access is needed
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -87,80 +90,125 @@ enum ResourceType {
   GLOSSARY
 }
 
+enum FeedbackResult {
+  ACCURATE
+  PARTIALLY_ACCURATE
+  INACCURATE
+}
+
+enum AISystemComponent {
+  INQUIRE_AIR
+  INQUIRE_LAND
+  INQUIRE_WATER
+  PROBLEM_AIR
+  PROBLEM_LAND
+  PROBLEM_WATER
+  MARKET_AIR
+  MARKET_LAND
+  MARKET_WATER
+  PRODUCT_SUGGESTION
+  COMMENT_ANALYSIS
+  CONTENT_MODERATION
+}
+
 model User {
-  id                   String    @id @default(uuid())
-  name                 String?
-  username             String?   @unique
-  email                String?   @unique
-  emailVerified        DateTime?
-  image                String?
-  role                 String    @default("USER") // "USER", "MODERATOR", "ADMIN", "SUPER_ADMIN"
+  id                      String     @id @default(uuid())
+  name                    String?
+  username                String?    @unique
+  email                   String?    @unique
+  emailVerified           DateTime?
+  image                   String?
+  role                    String     @default("USER") // "USER", "MODERATOR", "ADMIN", "SUPER_ADMIN"
   notificationPreferences String? // JSON string for notification preferences
-  reputationPoints     Int       @default(0)
-  trustLevel           TrustLevel @default(NEW_USER)
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  
+  reputationPoints        Int        @default(0)
+  trustLevel              TrustLevel @default(NEW_USER)
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+
   // Authentication
-  password          String?
-  accounts          Account[]
-  sessions          Session[]
-  
+  password String?
+  accounts Account[]
+  sessions Session[]
+
   // Content creation and moderation
-  articles          Article[]
-  guides            Guide[]
-  videos            Video[]
-  glossaryTerms     GlossaryTerm[]
-  resources         Resource[]
-  moderatedContent  ModerationLog[]
-  moderatedResources ResourceModerationLog[] @relation("ModeratedResources")
-  products         Product[]
-  orders           Order[]
-  messages         Message[]
-  passwordReset    PasswordReset?
-  verifyToken      VerifyToken?
-  profile          UserProfile?
-  posts            ForumPost[]
-  comments         Comment[]
-  ownedGroups      Group[]
-  memberOf         GroupMember[]
-  notifications    Notification[]
-  analyticsEvents  AnalyticsEvent[]
-  createdReviews   MarketplaceReview[] @relation("UserCreatedReviews")
-  reviewsReceived  MarketplaceReview[] @relation("UserReceivedReviews")
-  reviews          Review[]
-  
-  // Marketplace chat relations
+  articles                 Article[]
+  guides                   Guide[]
+  videos                   Video[]
+  glossaryTerms            GlossaryTerm[]
+  resources                Resource[]
+  moderatedContent         ModerationLog[]
+  moderatedResources       ResourceModerationLog[]       @relation("ModeratedResources")
+  products                 Product[]
+  orders                   Order[]
+  messages                 Message[]
+  passwordReset            PasswordReset?
+  verifyToken              VerifyToken?
+  profile                  UserProfile?
+  posts                    ForumPost[]
+  comments                 Comment[]
+  ownedGroups              Group[]
+  memberOf                 GroupMember[]
+  notifications            Notification[]
+  analyticsEvents          AnalyticsEvent[]
+  createdReviews           MarketplaceReview[]           @relation("UserCreatedReviews")
+  reviewsReceived          MarketplaceReview[]           @relation("UserReceivedReviews")
+  reviews                  Review[]
+  aiEvaluations            AIFeedbackLoop[]              @relation("user_ai_feedback")
+  aiModeratorEvals         AIFeedbackLoop[]              @relation("moderator_ai_feedback")
+  reporterCredibility      ReporterCredibility?          @relation("user_reporter_credibility")
   marketplaceConversations MarketplaceConversationUser[]
   marketplaceMessages      MarketplaceMessage[]
   marketplaceMessageReads  MarketplaceMessageRead[]
   marketplaceProducts      MarketplaceProduct[]
-  marketplaceBuyerOrders   MarketplaceOrder[]    @relation("BuyerOrders")
-  marketplaceSellerOrders  MarketplaceOrder[]    @relation("SellerOrders")
-  
+  marketplaceBuyerOrders   MarketplaceOrder[]            @relation("BuyerOrders")
+  marketplaceSellerOrders  MarketplaceOrder[]            @relation("SellerOrders")
+
   // Marketplace reviews relations
-  marketplaceReviewVotes       MarketplaceReviewVote[]
-  marketplaceReviewResponses   MarketplaceReviewResponse[]
-  
+  marketplaceReviewVotes     MarketplaceReviewVote[]
+  marketplaceReviewResponses MarketplaceReviewResponse[]
+  marketplaceReviewReports   MarketplaceReviewReport[]   @relation("MarketplaceReviewReporter")
+
   // Wishlist relations
-  wishlists                    Wishlist[]
-  wishlistItems                WishlistItem[]
-  productViews                 UserProductView[]
-  
+  wishlists     Wishlist[]
+  wishlistItems WishlistItem[]
+  productViews  UserProductView[]
+
+  // Chat usage tracking
+  chatUsage ChatUsage[] @relation("UserChatUsage")
+
+  // Moderation appeal notifications
+  appealNotifications ModerationAppealNotification[] @relation("UserAppealNotifications")
+
+  // Event relations
+  eventAttendances EventAttendee[] @relation("EventAttendees")
+  eventReminders   EventReminder[] @relation("EventReminders")
+  createdEvents    Event[]         @relation("CreatedEvents")
+
   // Search analytics relations
-  searchAnalytics          SearchAnalytics[]
-  sellerSearchAnalytics    SearchAnalytics[] @relation("SellerSearchAnalytics")
-  
+  searchAnalytics       SearchAnalytics[]
+  sellerSearchAnalytics SearchAnalytics[] @relation("SellerSearchAnalytics")
+
   // Reputation system relations
-  reputationActivities     ReputationActivity[]  @relation("UserReputationActivities")
-  earnedBadges             UserBadge[]
-  endorsementsGiven        UserEndorsement[]     @relation("EndorsementGiver")
-  endorsementsReceived     UserEndorsement[]     @relation("EndorsementReceiver")
+  reputationActivities     ReputationActivity[]       @relation("UserReputationActivities")
+  earnedBadges             UserBadge[]                @relation("UserEarnedBadges")
+  endorsementsGiven        UserEndorsement[]          @relation("EndorsementGiver")
+  endorsementsReceived     UserEndorsement[]          @relation("EndorsementReceiver")
   verifiedCredentials      UserCredential[]
-  moderationQueue         ModerationQueue[]
-  moderationHistory       ModerationHistory[]
-  moderationRules         ModerationRule[]
-  
+  moderationQueue          ModerationQueue[]          @relation("ModerationQueueModerator")
+  moderationReports        ModerationQueue[]          @relation("ModerationQueueReporter")
+  moderationHistory        ModerationHistory[]        @relation("ModerationHistoryModerator")
+  moderationRules          ModerationRule[]           @relation("ModerationRuleCreator")
+  submittedAppeals         ModerationAppeal[]         @relation("AppealAuthor")
+  moderatedAppeals         ModerationAppeal[]         @relation("AppealModerator")
+  commentModerationReviews CommentModerationLog[]     @relation("CommentModerationReviewer")
+  contentQualityModeration ContentQualityAssessment[] @relation("ContentQualityModerator")
+  moderatedContentItems    ModeratedContent[]         @relation("ContentModerator")
+  createdModerationTokens  ModerationToken[]          @relation("ModerationTokenCreator")
+
+  // Report relations
+  submittedReports Report[] @relation("UserReports")
+  resolvedReports  Report[] @relation("ReportResolutions")
+
   @@map("users")
 }
 
@@ -336,15 +384,17 @@ model ForumPost {
 }
 
 model Comment {
-  id        String    @id @default(uuid())
-  content   String    @db.Text
-  authorId  String
-  author    User      @relation(fields: [authorId], references: [id])
-  postId    String
-  post      ForumPost @relation(fields: [postId], references: [id])
-  hidden    Boolean   @default(false)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id                  String                      @id @default(uuid())
+  content             String                      @db.Text
+  authorId            String
+  author              User                        @relation(fields: [authorId], references: [id])
+  postId              String
+  post                ForumPost                   @relation(fields: [postId], references: [id])
+  hidden              Boolean                     @default(false)
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  appeals             ModerationAppeal[]
+  qualityEnhancements CommentQualityEnhancement[] @relation("CommentQualityEnhancements")
 
   @@index([authorId])
   @@index([postId])
@@ -400,18 +450,18 @@ model GroupSettings {
 }
 
 model GroupRole {
-  id          String              @id @default(uuid())
+  id          String                @id @default(uuid())
   name        String
-  color       String              @default("#4299e1")
+  color       String                @default("#4299e1")
   groupId     String
-  group       Group               @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group       Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
   priority    Int
-  isDefault   Boolean             @default(false)
-  isOwner     Boolean             @default(false)
+  isDefault   Boolean               @default(false)
+  isOwner     Boolean               @default(false)
   permissions GroupRolePermission[]
   members     GroupMember[]
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
 
   @@index([groupId])
   @@map("group_roles")
@@ -440,14 +490,14 @@ model GroupPermission {
 }
 
 model GroupMember {
-  id       String    @id @default(uuid())
-  userId   String
-  user     User      @relation(fields: [userId], references: [id])
-  groupId  String
-  group    Group     @relation(fields: [groupId], references: [id])
-  role     String    @default("MEMBER")
-  joinedAt DateTime  @default(now())
-  roleId   String?
+  id        String     @id @default(uuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id])
+  groupId   String
+  group     Group      @relation(fields: [groupId], references: [id])
+  role      String     @default("MEMBER")
+  joinedAt  DateTime   @default(now())
+  roleId    String?
   groupRole GroupRole? @relation(fields: [roleId], references: [id])
 
   @@index([userId])
@@ -459,16 +509,16 @@ model GroupMember {
 model Notification {
   id        String   @id @default(cuid())
   userId    String
-  type      String   // MODERATION, ADMIN_MODERATION, MODERATION_BATCH, ADMIN_MODERATION_BATCH, etc.
+  type      String // MODERATION, ADMIN_MODERATION, MODERATION_BATCH, ADMIN_MODERATION_BATCH, etc.
   title     String
   message   String
-  data      String?  // JSON string with additional data
+  data      String? // JSON string with additional data
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
-  
+
   // Relations
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([type])
   @@index([read])
@@ -543,15 +593,15 @@ model AnalyticsEvent {
 
 // Marketplace Chat Models
 model MarketplaceConversation {
-  id           String                       @id @default(uuid())
+  id           String                        @id @default(uuid())
   participants MarketplaceConversationUser[]
   messages     MarketplaceMessage[]
   productId    String?
-  product      MarketplaceProduct?          @relation(fields: [productId], references: [id], onDelete: SetNull)
+  product      MarketplaceProduct?           @relation(fields: [productId], references: [id], onDelete: SetNull)
   orderId      String?
-  order        MarketplaceOrder?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  createdAt    DateTime                     @default(now())
-  updatedAt    DateTime                     @updatedAt
+  order        MarketplaceOrder?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdAt    DateTime                      @default(now())
+  updatedAt    DateTime                      @updatedAt
 
   @@index([productId])
   @@index([orderId])
@@ -570,15 +620,15 @@ model MarketplaceConversationUser {
 }
 
 model MarketplaceMessage {
-  id             String                  @id @default(uuid())
+  id             String                   @id @default(uuid())
   conversationId String
-  conversation   MarketplaceConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversation   MarketplaceConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       String
-  sender         User                    @relation(fields: [senderId], references: [id], onDelete: Cascade)
-  content        String                  @db.Text
+  sender         User                     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content        String                   @db.Text
   readBy         MarketplaceMessageRead[]
-  createdAt      DateTime                @default(now())
-  updatedAt      DateTime                @updatedAt
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
 
   @@index([conversationId])
   @@index([senderId])
@@ -598,29 +648,29 @@ model MarketplaceMessageRead {
 }
 
 model MarketplaceProduct {
-  id            String                   @id @default(uuid())
-  name          String
-  description   String                   @db.Text
-  price         Float
-  categoryId    String
-  category      MarketplaceCategory      @relation(fields: [categoryId], references: [id])
-  condition     String
-  images        String[]
-  location      Json?                    // { type: "Point", coordinates: [lng, lat], address: "..." }
-  status        String                   @default("active") // active, pending, sold, inactive
-  sellerId      String
-  seller        User                     @relation(fields: [sellerId], references: [id])
-  conversations MarketplaceConversation[]
-  orders        MarketplaceOrder[]
-  reviews       MarketplaceReview[]
-  wishlistItems WishlistItem[]
-  userViews     UserProductView[]
-  sourceRecommendations ProductRecommendation[] @relation("SourceProduct")
-  targetRecommendations ProductRecommendation[] @relation("RecommendedProduct")
-  seasonalTags   SeasonalProduct[]
-  searchAnalytics SearchAnalytics[]
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
+  id                    String                    @id @default(uuid())
+  name                  String
+  description           String                    @db.Text
+  price                 Float
+  categoryId            String
+  category              MarketplaceCategory       @relation(fields: [categoryId], references: [id])
+  condition             String
+  images                String[]
+  location              Json? // { type: "Point", coordinates: [lng, lat], address: "..." }
+  status                String                    @default("active") // active, pending, sold, inactive
+  sellerId              String
+  seller                User                      @relation(fields: [sellerId], references: [id])
+  conversations         MarketplaceConversation[]
+  orders                MarketplaceOrder[]
+  reviews               MarketplaceReview[]
+  wishlistItems         WishlistItem[]
+  userViews             UserProductView[]
+  sourceRecommendations ProductRecommendation[]   @relation("SourceProduct")
+  targetRecommendations ProductRecommendation[]   @relation("RecommendedProduct")
+  seasonalTags          SeasonalProduct[]
+  searchAnalytics       SearchAnalytics[]
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
 
   @@index([sellerId])
   @@index([categoryId])
@@ -628,35 +678,35 @@ model MarketplaceProduct {
 }
 
 model MarketplaceCategory {
-  id          String               @id @default(uuid())
-  name        String               @unique
-  description String?
-  products    MarketplaceProduct[]
+  id              String               @id @default(uuid())
+  name            String               @unique
+  description     String?
+  products        MarketplaceProduct[]
   searchAnalytics SearchAnalytics[]
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 }
 
 model MarketplaceOrder {
-  id              String                   @id @default(uuid())
+  id              String                    @id @default(uuid())
   productId       String
-  product         MarketplaceProduct       @relation(fields: [productId], references: [id])
+  product         MarketplaceProduct        @relation(fields: [productId], references: [id])
   buyerId         String
-  buyer           User                     @relation("BuyerOrders", fields: [buyerId], references: [id])
+  buyer           User                      @relation("BuyerOrders", fields: [buyerId], references: [id])
   sellerId        String
-  seller          User                     @relation("SellerOrders", fields: [sellerId], references: [id])
-  quantity        Int                      @default(1)
-  status          String                   @default("pending") // pending, confirmed, shipped, delivered, cancelled
-  totalAmount     Json                     // { amount: 100, currency: "USD" }
+  seller          User                      @relation("SellerOrders", fields: [sellerId], references: [id])
+  quantity        Int                       @default(1)
+  status          String                    @default("pending") // pending, confirmed, shipped, delivered, cancelled
+  totalAmount     Json // { amount: 100, currency: "USD" }
   paymentMethod   String
-  paymentStatus   String                   @default("pending") // pending, paid, refunded
-  shippingAddress Json                     // { street: "", city: "", state: "", country: "", postalCode: "" }
+  paymentStatus   String                    @default("pending") // pending, paid, refunded
+  shippingAddress Json // { street: "", city: "", state: "", country: "", postalCode: "" }
   trackingNumber  String?
   notes           String?
   conversations   MarketplaceConversation[]
   review          MarketplaceReview?
-  createdAt       DateTime                 @default(now())
-  updatedAt       DateTime                 @updatedAt
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
 
   @@index([productId])
   @@index([buyerId])
@@ -665,32 +715,32 @@ model MarketplaceOrder {
 }
 
 model MarketplaceReview {
-  id          String          @id @default(uuid())
-  orderId     String          @unique
-  order       MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId   String
-  product     MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
-  userId      String
-  user        User            @relation("UserCreatedReviews", fields: [userId], references: [id], onDelete: Cascade)
-  sellerId    String?
-  seller      User?           @relation("UserReceivedReviews", fields: [sellerId], references: [id], onDelete: SetNull)
-  rating      Int             // 1-5 rating
-  title       String?
-  content     String          @db.Text
-  images      String[]        // Optional review images
-  isVerified  Boolean         @default(true) // Always true for order-based reviews
-  status      String          @default("published") // published, hidden, flagged, pending_review
-  moderationStatus String?    // approved, rejected, pending
-  moderationReason String?    @db.Text // Reason if rejected
-  moderatedBy String?         // Admin who last moderated the review
-  moderatedAt DateTime?       // When the review was last moderated
-  reportCount Int             @default(0) // Number of times review has been reported
-  isAutomatedlyFlagged Boolean @default(false) // Flagged by automated content filter
-  helpfulVotes MarketplaceReviewVote[]
-  responses   MarketplaceReviewResponse[]
-  reports     MarketplaceReviewReport[] // Reports related to this review
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id                   String                      @id @default(uuid())
+  orderId              String                      @unique
+  order                MarketplaceOrder            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId            String
+  product              MarketplaceProduct          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId               String
+  user                 User                        @relation("UserCreatedReviews", fields: [userId], references: [id], onDelete: Cascade)
+  sellerId             String?
+  seller               User?                       @relation("UserReceivedReviews", fields: [sellerId], references: [id], onDelete: SetNull)
+  rating               Int // 1-5 rating
+  title                String?
+  content              String                      @db.Text
+  images               String[] // Optional review images
+  isVerified           Boolean                     @default(true) // Always true for order-based reviews
+  status               String                      @default("published") // published, hidden, flagged, pending_review
+  moderationStatus     String? // approved, rejected, pending
+  moderationReason     String?                     @db.Text // Reason if rejected
+  moderatedBy          String? // Admin who last moderated the review
+  moderatedAt          DateTime? // When the review was last moderated
+  reportCount          Int                         @default(0) // Number of times review has been reported
+  isAutomatedlyFlagged Boolean                     @default(false) // Flagged by automated content filter
+  helpfulVotes         MarketplaceReviewVote[]
+  responses            MarketplaceReviewResponse[]
+  reports              MarketplaceReviewReport[] // Reports related to this review
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
 
   @@index([productId])
   @@index([userId])
@@ -701,18 +751,18 @@ model MarketplaceReview {
 }
 
 model MarketplaceReviewReport {
-  id          String          @id @default(uuid())
+  id          String            @id @default(uuid())
   reviewId    String
   review      MarketplaceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   reporterId  String
-  reporter    User            @relation(fields: [reporterId], references: [id], onDelete: Cascade)
-  reason      String          // spam, offensive, irrelevant, misleading, other
-  description String?         @db.Text
-  status      String          @default("pending") // pending, resolved, dismissed
+  reporter    User              @relation("MarketplaceReviewReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reason      String // spam, offensive, irrelevant, misleading, other
+  description String?           @db.Text
+  status      String            @default("pending") // pending, resolved, dismissed
   resolvedBy  String?
   resolvedAt  DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   @@index([reviewId])
   @@index([reporterId])
@@ -720,27 +770,27 @@ model MarketplaceReviewReport {
 }
 
 model MarketplaceReviewVote {
-  id        String           @id @default(uuid())
+  id        String            @id @default(uuid())
   reviewId  String
   review    MarketplaceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   isHelpful Boolean
-  createdAt DateTime         @default(now())
+  createdAt DateTime          @default(now())
 
   @@unique([reviewId, userId])
   @@index([userId])
 }
 
 model MarketplaceReviewResponse {
-  id        String           @id @default(uuid())
+  id        String            @id @default(uuid())
   reviewId  String
   review    MarketplaceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content   String           @db.Text
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String            @db.Text
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 
   @@index([reviewId])
   @@index([userId])
@@ -782,15 +832,15 @@ model WishlistItem {
 
 // Product Recommendation Models
 model UserProductView {
-  id        String             @id @default(uuid())
-  userId    String
-  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId String
-  product   MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
-  viewCount Int                @default(1)
+  id         String             @id @default(uuid())
+  userId     String
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId  String
+  product    MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  viewCount  Int                @default(1)
   lastViewed DateTime           @default(now())
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
 
   @@unique([userId, productId])
   @@index([userId])
@@ -798,15 +848,15 @@ model UserProductView {
 }
 
 model ProductRecommendation {
-  id                 String             @id @default(uuid())
-  sourceProductId    String
-  sourceProduct      MarketplaceProduct @relation("SourceProduct", fields: [sourceProductId], references: [id], onDelete: Cascade)
+  id                   String             @id @default(uuid())
+  sourceProductId      String
+  sourceProduct        MarketplaceProduct @relation("SourceProduct", fields: [sourceProductId], references: [id], onDelete: Cascade)
   recommendedProductId String
-  recommendedProduct  MarketplaceProduct @relation("RecommendedProduct", fields: [recommendedProductId], references: [id], onDelete: Cascade)
-  score              Float               @default(0)
-  type               String              // "also_bought", "similar", "category", "seasonal"
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  recommendedProduct   MarketplaceProduct @relation("RecommendedProduct", fields: [recommendedProductId], references: [id], onDelete: Cascade)
+  score                Float              @default(0)
+  type                 String // "also_bought", "similar", "category", "seasonal"
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
   @@unique([sourceProductId, recommendedProductId])
   @@index([sourceProductId])
@@ -818,9 +868,9 @@ model SeasonalProduct {
   id         String             @id @default(uuid())
   productId  String
   product    MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
-  seasonName String             // "spring", "summer", "fall", "winter", "holiday", etc.
-  startDate  DateTime?          // Optional start date for seasonal relevance
-  endDate    DateTime?          // Optional end date for seasonal relevance
+  seasonName String // "spring", "summer", "fall", "winter", "holiday", etc.
+  startDate  DateTime? // Optional start date for seasonal relevance
+  endDate    DateTime? // Optional end date for seasonal relevance
   priority   Int                @default(1) // Higher values indicate higher priority
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
@@ -831,23 +881,23 @@ model SeasonalProduct {
 }
 
 model SearchAnalytics {
-  id           String    @id @default(uuid())
-  query        String    @db.Text
-  action       String    // search, click, filter, etc.
+  id           String               @id @default(uuid())
+  query        String               @db.Text
+  action       String // search, click, filter, etc.
   userId       String?
-  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user         User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   productId    String?
-  product      MarketplaceProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  product      MarketplaceProduct?  @relation(fields: [productId], references: [id], onDelete: SetNull)
   categoryId   String?
   category     MarketplaceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   sellerId     String?
-  seller       User?     @relation("SellerSearchAnalytics", fields: [sellerId], references: [id], onDelete: SetNull)
+  seller       User?                @relation("SellerSearchAnalytics", fields: [sellerId], references: [id], onDelete: SetNull)
   resultsCount Int?
-  position     Int?      // Position of the clicked item in results
-  filters      String?   @db.Text // JSON string of applied filters
+  position     Int? // Position of the clicked item in results
+  filters      String?              @db.Text // JSON string of applied filters
   ip           String?
-  userAgent    String?   @db.Text
-  timestamp    DateTime  @default(now())
+  userAgent    String?              @db.Text
+  timestamp    DateTime             @default(now())
 
   @@index([query])
   @@index([userId])
@@ -856,42 +906,42 @@ model SearchAnalytics {
 
 // Content Management Models
 model ContentCategory {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  slug        String    @unique
-  description String?   @db.Text
+  id          String            @id @default(uuid())
+  name        String            @unique
+  slug        String            @unique
+  description String?           @db.Text
   parentId    String?
-  parent      ContentCategory? @relation("ContentCategoryHierarchy", fields: [parentId], references: [id])
+  parent      ContentCategory?  @relation("ContentCategoryHierarchy", fields: [parentId], references: [id])
   children    ContentCategory[] @relation("ContentCategoryHierarchy")
   articles    Article[]
   guides      Guide[]
   videos      Video[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   @@index([parentId])
   @@map("content_categories")
 }
 
 model Article {
-  id            String    @id @default(uuid())
+  id            String           @id @default(uuid())
   title         String
-  slug          String    @unique
-  summary       String?   @db.Text
-  content       String    @db.Text
+  slug          String           @unique
+  summary       String?          @db.Text
+  content       String           @db.Text
   featuredImage String?
   categoryId    String?
   category      ContentCategory? @relation(fields: [categoryId], references: [id])
   authorId      String?
-  author        User?     @relation(fields: [authorId], references: [id])
+  author        User?            @relation(fields: [authorId], references: [id])
   tags          String[]
-  status        String    @default("draft") // draft, published, archived
+  status        String           @default("draft") // draft, published, archived
   publishedAt   DateTime?
-  readTime      Int?      // Estimated read time in minutes
-  metadata      Json?     // For SEO and additional attributes
-  viewCount     Int       @default(0)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  readTime      Int? // Estimated read time in minutes
+  metadata      Json? // For SEO and additional attributes
+  viewCount     Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@index([categoryId])
   @@index([authorId])
@@ -901,25 +951,25 @@ model Article {
 }
 
 model Guide {
-  id            String    @id @default(uuid())
+  id            String           @id @default(uuid())
   title         String
-  slug          String    @unique
-  summary       String?   @db.Text
-  content       String    @db.Text
+  slug          String           @unique
+  summary       String?          @db.Text
+  content       String           @db.Text
   featuredImage String?
   categoryId    String?
   category      ContentCategory? @relation(fields: [categoryId], references: [id])
   authorId      String?
-  author        User?     @relation(fields: [authorId], references: [id])
-  steps         Json[]    // Array of guide steps
+  author        User?            @relation(fields: [authorId], references: [id])
+  steps         Json[] // Array of guide steps
   tags          String[]
-  status        String    @default("draft") // draft, published, archived
+  status        String           @default("draft") // draft, published, archived
   publishedAt   DateTime?
-  difficulty    String?   // beginner, intermediate, advanced
-  metadata      Json?     // For SEO and additional attributes
-  viewCount     Int       @default(0)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  difficulty    String? // beginner, intermediate, advanced
+  metadata      Json? // For SEO and additional attributes
+  viewCount     Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@index([categoryId])
   @@index([authorId])
@@ -929,25 +979,25 @@ model Guide {
 }
 
 model Video {
-  id            String    @id @default(uuid())
-  title         String
-  slug          String    @unique
-  description   String?   @db.Text
-  videoUrl      String
-  thumbnailUrl  String?
-  duration      Int?      // Duration in seconds
-  categoryId    String?
-  category      ContentCategory? @relation(fields: [categoryId], references: [id])
-  authorId      String?
-  author        User?     @relation(fields: [authorId], references: [id])
-  tags          String[]
-  status        String    @default("draft") // draft, published, archived
-  publishedAt   DateTime?
-  transcript    String?   @db.Text
-  metadata      Json?     // For SEO and additional attributes
-  viewCount     Int       @default(0)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String           @id @default(uuid())
+  title        String
+  slug         String           @unique
+  description  String?          @db.Text
+  videoUrl     String
+  thumbnailUrl String?
+  duration     Int? // Duration in seconds
+  categoryId   String?
+  category     ContentCategory? @relation(fields: [categoryId], references: [id])
+  authorId     String?
+  author       User?            @relation(fields: [authorId], references: [id])
+  tags         String[]
+  status       String           @default("draft") // draft, published, archived
+  publishedAt  DateTime?
+  transcript   String?          @db.Text
+  metadata     Json? // For SEO and additional attributes
+  viewCount    Int              @default(0)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   @@index([categoryId])
   @@index([authorId])
@@ -979,56 +1029,56 @@ model GlossaryTerm {
 // Vercel SDK Content Versioning
 model ContentVersion {
   id          String    @id @default(uuid())
-  contentType String    // article, guide, video, glossary
-  contentId   String    // ID of the content item
+  contentType String // article, guide, video, glossary
+  contentId   String // ID of the content item
   version     Int
-  data        Json      // Full content snapshot
+  data        Json // Full content snapshot
   createdBy   String?
   createdAt   DateTime  @default(now())
   publishedAt DateTime?
-  
+
   @@unique([contentType, contentId, version])
   @@index([contentType, contentId])
   @@map("content_versions")
 }
 
 model ModelSchema {
-  id          String  @id @default(uuid())
-  name        String  @unique
-  description String? @db.Text
-  schema      Json    // JSON Schema definition
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?  @db.Text
+  schema      Json // JSON Schema definition
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   @@map("model_schemas")
 }
 
 model Setting {
-  key         String    @id
-  value       String    @db.Text
-  description String?   @db.Text
-  updatedAt   DateTime  @updatedAt
-  createdAt   DateTime  @default(now())
+  key         String   @id
+  value       String   @db.Text
+  description String?  @db.Text
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
 }
 
 model Resource {
-  id                String         @id @default(cuid())
-  title             String
-  description       String?        @db.Text
-  type              ResourceType
-  status            ResourceStatus @default(DRAFT)
-  featured          Boolean        @default(false)
-  authorId          String
-  isIndexed         Boolean        @default(false)
-  lastIndexedAt     DateTime?
-  flaggedForReview  Boolean        @default(false)
-  flagReason        String?        @db.Text
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  id               String         @id @default(cuid())
+  title            String
+  description      String?        @db.Text
+  type             ResourceType
+  status           ResourceStatus @default(DRAFT)
+  featured         Boolean        @default(false)
+  authorId         String
+  isIndexed        Boolean        @default(false)
+  lastIndexedAt    DateTime?
+  flaggedForReview Boolean        @default(false)
+  flagReason       String?        @db.Text
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   // Relations
-  author            User           @relation(fields: [authorId], references: [id])
-  moderationLogs    ResourceModerationLog[]
+  author                    User                       @relation(fields: [authorId], references: [id])
+  moderationLogs            ResourceModerationLog[]
   contentQualityAssessments ContentQualityAssessment[]
 
   @@index([type])
@@ -1039,19 +1089,19 @@ model Resource {
 }
 
 model ResourceModerationLog {
-  id             String        @id @default(cuid())
-  resourceId     String
-  action         String        // 'approve', 'reject', 'archive', 'feature', 'unfeature'
-  previousStatus ResourceStatus?
-  moderatorId    String
-  reason         String?       // Optional reason
-  batchId        String?       // For tracking bulk operations
-  qualityAssessmentId String?  // Reference to content quality assessment if applicable
-  createdAt      DateTime      @default(now())
-  
+  id                  String          @id @default(cuid())
+  resourceId          String
+  action              String // 'approve', 'reject', 'archive', 'feature', 'unfeature'
+  previousStatus      ResourceStatus?
+  moderatorId         String
+  reason              String? // Optional reason
+  batchId             String? // For tracking bulk operations
+  qualityAssessmentId String? // Reference to content quality assessment if applicable
+  createdAt           DateTime        @default(now())
+
   // Relations
-  resource       Resource      @relation(fields: [resourceId], references: [id])
-  moderator      User          @relation(fields: [moderatorId], references: [id])
+  resource                 Resource                  @relation(fields: [resourceId], references: [id])
+  moderator                User                      @relation("ModeratedResources", fields: [moderatorId], references: [id])
   contentQualityAssessment ContentQualityAssessment? @relation(fields: [qualityAssessmentId], references: [id])
 
   @@index([resourceId])
@@ -1062,27 +1112,27 @@ model ResourceModerationLog {
 }
 
 model ContentQualityAssessment {
-  id                 String    @id @default(cuid())
-  resourceId         String
-  qualityScore       Int       // 0-100 score
-  flags              Json      // Array of flags with type, confidence, and details
-  suggestions        Json      // Array of improvement suggestions
-  details            Json      // Detailed scores for different aspects
-  createdAt          DateTime  @default(now())
-  automaticallyFlagged Boolean @default(false)
-  
+  id                   String   @id @default(cuid())
+  resourceId           String
+  qualityScore         Int // 0-100 score
+  flags                Json // Array of flags with type, confidence, and details
+  suggestions          Json // Array of improvement suggestions
+  details              Json // Detailed scores for different aspects
+  createdAt            DateTime @default(now())
+  automaticallyFlagged Boolean  @default(false)
+
   // Moderator feedback fields
-  moderatorId        String?
-  moderatorNotes     String?   @db.Text
+  moderatorId          String?
+  moderator            User?     @relation("ContentQualityModerator", fields: [moderatorId], references: [id])
+  moderatorNotes       String?   @db.Text
   moderatorActionTaken String? // 'approved', 'rejected', 'improvements_requested'
-  moderatorReviewedAt DateTime?
-  overrideQualityScore Int?    // Moderator can override the AI score
-  
+  moderatorReviewedAt  DateTime?
+  overrideQualityScore Int? // Moderator can override the AI score
+
   // Relations
-  resource           Resource  @relation(fields: [resourceId], references: [id])
-  moderator          User?     @relation(fields: [moderatorId], references: [id])
-  moderationLogs     ResourceModerationLog[]
-  
+  resource       Resource                @relation(fields: [resourceId], references: [id])
+  moderationLogs ResourceModerationLog[]
+
   @@index([resourceId])
   @@index([moderatorId])
   @@index([automaticallyFlagged])
@@ -1092,18 +1142,18 @@ model ContentQualityAssessment {
 
 // NextAuth.js models
 model Account {
-  id                 String  @id @default(cuid())
-  userId             String
-  type               String
-  provider           String
-  providerAccountId  String
-  refresh_token      String?  @db.Text
-  access_token       String?  @db.Text
-  expires_at         Int?
-  token_type         String?
-  scope              String?
-  id_token           String?  @db.Text
-  session_state      String?
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1122,13 +1172,13 @@ model Session {
 }
 
 model ReputationActivity {
-  id        String   @id @default(uuid())
+  id        String                 @id @default(uuid())
   userId    String
   type      ReputationActivityType
   points    Int
   metadata  Json?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime               @default(now())
+  user      User                   @relation("UserReputationActivities", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([type])
@@ -1136,12 +1186,12 @@ model ReputationActivity {
 }
 
 model UserBadge {
-  id        String   @id @default(uuid())
-  userId    String
-  badgeId   String
-  badge     Badge    @relation(fields: [badgeId], references: [id])
-  earnedAt  DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String   @id @default(uuid())
+  userId   String
+  badgeId  String
+  badge    Badge    @relation("BadgeEarned", fields: [badgeId], references: [id])
+  earnedAt DateTime @default(now())
+  user     User     @relation("UserEarnedBadges", fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([badgeId])
@@ -1149,27 +1199,28 @@ model UserBadge {
 }
 
 model Badge {
-  id          String   @id @default(uuid())
+  id          String        @id @default(uuid())
   name        String
   description String?
   category    BadgeCategory
   points      Int
   icon        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  userBadges  UserBadge[]   @relation("BadgeEarned")
 
   @@index([category])
   @@index([points])
 }
 
 model UserEndorsement {
-  id        String   @id @default(uuid())
-  giverId   String
-  giver     User     @relation(fields: [giverId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  giverId    String
+  giver      User     @relation("EndorsementGiver", fields: [giverId], references: [id], onDelete: Cascade)
   receiverId String
-  receiver  User     @relation(fields: [receiverId], references: [id], onDelete: Cascade)
-  skill     String
-  createdAt DateTime @default(now())
+  receiver   User     @relation("EndorsementReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  skill      String
+  createdAt  DateTime @default(now())
 
   @@index([giverId])
   @@index([receiverId])
@@ -1178,12 +1229,12 @@ model UserEndorsement {
 }
 
 model UserCredential {
-  id        String   @id @default(uuid())
-  userId    String
+  id         String   @id @default(uuid())
+  userId     String
   credential String
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verified   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([credential])
@@ -1193,27 +1244,27 @@ model UserCredential {
 
 // Event Calendar Models
 model Event {
-  id              String           @id @default(uuid())
+  id              String          @id @default(uuid())
   title           String
   description     String?
   location        String?
   startDate       DateTime
   endDate         DateTime
-  isAllDay        Boolean          @default(false)
-  recurrence      String?          // JSON string for recurrence rules (RRULE format)
+  isAllDay        Boolean         @default(false)
+  recurrence      String? // JSON string for recurrence rules (RRULE format)
   backgroundColor String?
   borderColor     String?
   url             String?
   creatorId       String
-  creator         User             @relation(fields: [creatorId], references: [id])
+  creator         User            @relation("CreatedEvents", fields: [creatorId], references: [id])
   attendees       EventAttendee[]
   categories      EventCategory[]
   reminders       EventReminder[]
   groupId         String?
-  group           Group?           @relation(fields: [groupId], references: [id])
-  isPublic        Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  group           Group?          @relation(fields: [groupId], references: [id])
+  isPublic        Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@index([creatorId])
   @@index([startDate, endDate])
@@ -1233,14 +1284,14 @@ model EventCategory {
 }
 
 model EventAttendee {
-  id        String        @id @default(uuid())
+  id        String         @id @default(uuid())
   userId    String
-  user      User          @relation(fields: [userId], references: [id])
+  user      User           @relation("EventAttendees", fields: [userId], references: [id])
   eventId   String
-  event     Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
   status    AttendeeStatus @default(PENDING)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@index([userId])
   @@index([eventId])
@@ -1252,7 +1303,7 @@ model EventReminder {
   eventId   String
   event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation("EventReminders", fields: [userId], references: [id])
   time      DateTime
   sent      Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -1274,26 +1325,26 @@ enum AttendeeStatus {
 
 // Content Moderation Models
 model ModerationQueue {
-  id                String               @id @default(uuid())
+  id                String              @id @default(uuid())
   contentId         String
   contentType       ContentType
-  status            ModerationStatus     @default(PENDING)
-  priority          ModerationPriority   @default(NORMAL)
+  status            ModerationStatus    @default(PENDING)
+  priority          ModerationPriority  @default(NORMAL)
   reason            String?
-  autoFlagged       Boolean              @default(false)
+  autoFlagged       Boolean             @default(false)
   aiConfidenceScore Float?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   reporterId        String?
-  reporter          User?                @relation("reporter", fields: [reporterId], references: [id])
+  reporter          User?               @relation("ModerationQueueReporter", fields: [reporterId], references: [id])
   moderatorId       String?
-  moderator         User?                @relation("moderator", fields: [moderatorId], references: [id])
+  moderator         User?               @relation("ModerationQueueModerator", fields: [moderatorId], references: [id])
   assignedAt        DateTime?
   resolvedAt        DateTime?
   notes             String?
   actionTaken       ModerationAction?
   history           ModerationHistory[]
-  
+
   @@index([contentId, contentType])
   @@index([status])
   @@index([priority])
@@ -1303,36 +1354,39 @@ model ModerationQueue {
 }
 
 model ModerationHistory {
-  id                String             @id @default(uuid())
-  queueItemId       String
-  queueItem         ModerationQueue    @relation(fields: [queueItemId], references: [id], onDelete: Cascade)
-  status            ModerationStatus
-  actionTaken       ModerationAction?
-  moderatorId       String?
-  moderator         User?              @relation(fields: [moderatorId], references: [id])
-  notes             String?
-  createdAt         DateTime           @default(now())
-  
+  id          String            @id @default(uuid())
+  queueItemId String
+  queueItem   ModerationQueue   @relation(fields: [queueItemId], references: [id], onDelete: Cascade)
+  status      ModerationStatus
+  actionTaken ModerationAction?
+  moderatorId String?
+  moderator   User?             @relation("ModerationHistoryModerator", fields: [moderatorId], references: [id])
+  notes       String?
+  createdAt   DateTime          @default(now())
+
   @@index([queueItemId])
   @@index([moderatorId])
   @@map("moderation_history")
 }
 
 model ModerationRule {
-  id                String             @id @default(uuid())
-  name              String             @unique
-  description       String?
-  contentType       ContentType
-  enabled           Boolean            @default(true)
-  priority          ModerationPriority @default(NORMAL)
-  autoAction        ModerationAction?
-  aiEnabled         Boolean            @default(false)
-  aiThreshold       Float?             @default(0.8)
-  keywords          String?            // Comma-separated list of trigger keywords
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  
+  id          String             @id @default(uuid())
+  name        String             @unique
+  description String?
+  contentType ContentType
+  enabled     Boolean            @default(true)
+  priority    ModerationPriority @default(NORMAL)
+  autoAction  ModerationAction?
+  aiEnabled   Boolean            @default(false)
+  aiThreshold Float?             @default(0.8)
+  keywords    String? // Comma-separated list of trigger keywords
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  createdById String?
+  createdBy   User?              @relation("ModerationRuleCreator", fields: [createdById], references: [id])
+
   @@index([contentType])
+  @@index([createdById])
   @@map("moderation_rules")
 }
 
@@ -1376,22 +1430,22 @@ enum ModerationAction {
 }
 
 model ModerationToken {
-  id                String             @id @default(uuid())
-  token             String             @unique
-  contentType       ContentType
-  contentId         String
-  expiresAt         DateTime
-  revoked           Boolean            @default(false)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  
+  id          String      @id @default(uuid())
+  token       String      @unique
+  contentType ContentType
+  contentId   String
+  expiresAt   DateTime
+  revoked     Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
   // Metadata for the token
   createdById       String?
-  createdBy         User?              @relation(fields: [createdById], references: [id])
+  createdBy         User?   @relation("ModerationTokenCreator", fields: [createdById], references: [id])
   issuedReason      String?
-  maxUsageCount     Int?               // Null means unlimited
-  currentUsageCount Int                @default(0)
-  
+  maxUsageCount     Int? // Null means unlimited
+  currentUsageCount Int     @default(0)
+
   @@index([contentType, contentId])
   @@index([createdById])
   @@index([expiresAt])
@@ -1399,20 +1453,20 @@ model ModerationToken {
 }
 
 model ModeratedContent {
-  id                String             @id @default(uuid())
-  contentType       ContentType
-  contentId         String
-  originalContent   String?            @db.Text
-  modifiedContent   String?            @db.Text
-  moderationStatus  ModerationStatus   @default(PENDING)
-  moderatedAt       DateTime?
-  moderatedById     String?
-  moderatedBy       User?              @relation(fields: [moderatedById], references: [id])
-  reason            String?
-  aiScore           Float?
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  
+  id               String           @id @default(uuid())
+  contentType      ContentType
+  contentId        String
+  originalContent  String?          @db.Text
+  modifiedContent  String?          @db.Text
+  moderationStatus ModerationStatus @default(PENDING)
+  moderatedAt      DateTime?
+  moderatedById    String?
+  moderatedBy      User?            @relation("ContentModerator", fields: [moderatedById], references: [id])
+  reason           String?
+  aiScore          Float?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
   @@unique([contentType, contentId])
   @@index([contentType, contentId])
   @@index([moderationStatus])
@@ -1421,19 +1475,147 @@ model ModeratedContent {
 }
 
 model CommentModerationLog {
-  id                String             @id @default(uuid())
-  commentId         String
-  reviewerId        String?
-  reviewer          User?              @relation(fields: [reviewerId], references: [id])
-  action            ModerationAction
-  previousContent   String?            @db.Text
-  updatedContent    String?            @db.Text
-  reason            String?
-  systemGenerated   Boolean            @default(false)
-  createdAt         DateTime           @default(now())
-  
+  id              String           @id @default(uuid())
+  commentId       String
+  reviewerId      String?
+  reviewer        User?            @relation("CommentModerationReviewer", fields: [reviewerId], references: [id])
+  action          ModerationAction
+  previousContent String?          @db.Text
+  updatedContent  String?          @db.Text
+  reason          String?
+  systemGenerated Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+
   @@index([commentId])
   @@index([reviewerId])
   @@index([createdAt])
   @@map("comment_moderation_logs")
+}
+
+model ModerationNotification {
+  id        String    @id @default(uuid())
+  type      String // 'comment_reported', 'comment_requires_review', 'moderation_action_taken', 'appeal_submitted'
+  priority  String // 'low', 'medium', 'high', 'urgent'
+  data      String    @db.Text // JSON string with notification specific data
+  read      Boolean   @default(false)
+  sentAt    DateTime  @default(now())
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([read, priority])
+  @@index([type])
+  @@map("moderation_notifications")
+}
+
+model ModerationAppeal {
+  id             String    @id @default(uuid())
+  commentId      String // The ID of the comment being appealed
+  userId         String // The ID of the user submitting the appeal
+  reason         String    @db.Text // The reason for the appeal
+  additionalInfo String?   @db.Text // Any additional information or context
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  moderatorNotes String?   @db.Text // Notes from the moderator
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  reviewedAt     DateTime?
+  reviewedBy     String? // ID of the moderator who reviewed the appeal
+
+  // Relationships
+  comment       Comment                        @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user          User                           @relation("AppealAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  moderator     User?                          @relation("AppealModerator", fields: [reviewedBy], references: [id], onDelete: SetNull)
+  notifications ModerationAppealNotification[] @relation("AppealNotifications")
+
+  @@index([commentId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("moderation_appeals")
+}
+
+model ModerationAppealNotification {
+  id        String   @id @default(uuid())
+  appealId  String
+  userId    String
+  status    String // PENDING, APPROVED, REJECTED - matches the appeal status
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relationships
+  appeal ModerationAppeal @relation("AppealNotifications", fields: [appealId], references: [id], onDelete: Cascade)
+  user   User             @relation("UserAppealNotifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([appealId])
+  @@index([userId])
+  @@index([read])
+  @@map("moderation_appeal_notifications")
+}
+
+model CommentQualityEnhancement {
+  id                     String   @id @default(uuid())
+  commentId              String
+  readabilityScore       Float    @default(0)
+  readabilitySuggestions String[]
+  constructiveFeedback   String[]
+  improvementPrompts     String[]
+  engagementSuggestions  String[]
+  contentEnrichment      Json? // Stores recommendations for links, references, etc.
+  mlPrioritization       Float? // Score for enhancement prioritization (0-1)
+  appliedByUser          Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relationships
+  comment Comment @relation("CommentQualityEnhancements", fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([commentId])
+  @@index([readabilityScore])
+  @@index([createdAt])
+  @@map("comment_quality_enhancements")
+}
+
+model AIFeedbackLoop {
+  id                String            @id @default(uuid())
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], name: "user_ai_feedback")
+  systemComponent   AISystemComponent
+  originalQuery     String            @db.Text
+  originalResponse  String            @db.Text
+  userFeedback      String?           @db.Text
+  feedbackResult    FeedbackResult
+  moderatorId       String?
+  moderator         User?             @relation(fields: [moderatorId], references: [id], name: "moderator_ai_feedback")
+  actionTaken       Boolean           @default(false)
+  resolution        String?           @db.Text
+  trainingDataAdded Boolean           @default(false)
+  metadata          Json?
+}
+
+model ReporterCredibility {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], name: "user_reporter_credibility")
+  credibilityScore Float    @default(50.0) // Scale of 0-100
+  totalReports     Int      @default(0)
+  accurateReports  Int      @default(0)
+  falseReports     Int      @default(0)
+  lastUpdated      DateTime @updatedAt
+  metadata         Json?
+}
+
+model ChatUsage {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation("UserChatUsage", fields: [userId], references: [id], onDelete: Cascade)
+  conversationId String
+  messageCount   Int
+  tokensUsed     Int
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([conversationId])
+  @@index([createdAt])
 }

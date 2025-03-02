@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { trackModerationCleanupJob } from '@/lib/vercel/moderation-analytics';
 import { invalidateModerationCache } from '@/lib/vercel/cache-control';
+import { clearOldNotifications } from '@/lib/vercel/notification-service';
 import { addDays, addHours, subDays } from 'date-fns';
+import { logger } from '@/lib/utils/logger';
 
 /**
  * Cleanup routine for the moderation system
@@ -10,6 +12,7 @@ import { addDays, addHours, subDays } from 'date-fns';
  * 1. Remove expired moderation tokens
  * 2. Auto-approve content that's been in PENDING state for too long
  * 3. Clean up moderation logs older than the retention period
+ * 4. Clean up old moderation notifications
  */
 export async function GET(request: Request) {
   // Track job execution start time
@@ -111,12 +114,18 @@ export async function GET(request: Request) {
     
     logger.info(`Deleted ${deletedLogs} moderation logs older than 90 days`);
     
+    // 4. Clean up old notifications (older than 30 days)
+    const clearedNotificationsCount = await clearOldNotifications(30);
+    
+    logger.info(`Cleared ${clearedNotificationsCount} old notifications`);
+    
     // Successful cleanup completed
     const response = {
       status: 'success',
       expiredTokensDeleted: deletedTokens,
       autoApprovedContents: pendingContents.length,
       oldLogsDeleted: deletedLogs,
+      oldNotificationsCleared: clearedNotificationsCount,
       executionTimeMs: Date.now() - startTime
     };
     
@@ -127,7 +136,8 @@ export async function GET(request: Request) {
       {
         expiredTokensDeleted: deletedTokens,
         autoApprovedContents: pendingContents.length,
-        oldLogsDeleted: deletedLogs
+        oldLogsDeleted: deletedLogs,
+        oldNotificationsCleared: clearedNotificationsCount
       }
     );
     

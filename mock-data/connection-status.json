@@ -1,0 +1,26 @@
+{
+  "mongodb": {
+    "status": "connected",
+    "lastChecked": "2025-03-02T22:00:03.392Z",
+    "responseTimeMs": 78,
+    "error": null,
+    "version": "5.0.6",
+    "uptime": 86983
+  },
+  "postgresql": {
+    "status": "connected",
+    "lastChecked": "2025-03-02T22:00:03.392Z",
+    "responseTimeMs": 19,
+    "error": null,
+    "version": "14.2",
+    "uptime": 56211
+  },
+  "vercelKv": {
+    "status": "connected",
+    "lastChecked": "2025-03-02T22:00:03.392Z",
+    "responseTimeMs": 82,
+    "error": null,
+    "version": "1.0.0",
+    "uptime": 35585
+  }
+}

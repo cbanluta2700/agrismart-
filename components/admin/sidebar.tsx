@@ -15,7 +15,8 @@ import {
   BarChart2,
   Menu,
   X,
-  Search
+  Search,
+  Database
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 
@@ -61,6 +62,22 @@ const navItems = [
       {
         title: "Content Filtering",
         href: "/admin/reviews/filter-config",
+        badge: "New"
+      },
+    ],
+  },
+  {
+    title: "Database",
+    href: "/admin/database",
+    icon: Database,
+    submenu: [
+      {
+        title: "Dashboard",
+        href: "/admin/database",
+      },
+      {
+        title: "KV Migration",
+        href: "/admin/database/migrate",
         badge: "New"
       },
     ],
