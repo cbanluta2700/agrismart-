@@ -1,0 +1,124 @@
+Obsidian Vault/
+├── Application/ (AgriSmart Project Directory)
+│   ├── Features/
+│   │   ├── Authentication/
+│   │   │   ├── Authentication.md        # Authentication system overview - TO CREATE
+│   │   │   ├── Registration.md          # User registration process - TO CREATE
+│   │   │   ├── Login.md                 # User login process - TO CREATE
+│   │   │   ├── Password-Reset.md        # Password reset flow - TO CREATE
+│   │   │   ├── Social-Login.md          # Social login integration (if any) - TO CREATE
+│   │   │   └── Authorization.md         # Role-Based Access Control (RBAC) - TO CREATE
+│   │   ├── Community/
+│   │   │   ├── Community.md            # Community features overview
+│   │   │   ├── Forums.md               # Forum discussions
+│   │   │   ├── Groups.md               # User groups or communities
+│   │   │   └── User-Profiles.md        # User profile customization
+│   │   ├── Marketplace/
+│   │   │   ├── Marketplace.md          # Marketplace overview
+│   │   │   ├── Product-Listing.md      # How products are listed
+│   │   │   ├── Product-Search.md       # Product search and filtering
+│   │   │   ├── Orders.md               # Order placement and management
+│   │   │   ├── Payments.md             # Payment processing
+│   │   │   └── Shipping.md             # Shipping methods
+│   │   ├── Resources/
+│   │   │   ├── Resources.md            # Resources section overview
+│   │   │   ├── Articles.md             # Informative articles
+│   │   │   ├── Guides.md               # Step-by-step guides
+│   │   │   ├── Videos.md               # Educational videos
+│   │   │   └── Glossary.md             # Glossary of terms
+│   │   ├── Reporting/
+│   │   │   ├── Reporting.md             # Reporting system overview
+│   │   │   ├── User-Reporting.md        # Reporting by users
+│   │   │   ├── Admin-Reports.md         # Reports for admins
+│   │   │   └── Analytics.md             # Analytics
+│   │   ├── Notifications.md            # Push notifications
+│   │   ├── Chat/
+│   │   │   ├── Chat.md                 # Chat system overview
+│   │   │   └── Real-Time-Communication.md # Real-time communication details
+│   │   └── Dashboard/
+│   │       ├── Guest-Homepage.md       # Guest Homepage content
+│   │       └── User-Homepage.md         # User Homepage content
+│   ├── Requirements/
+│   │   ├── User-Roles.md               # Guest, Buyer, Seller, Moderator, Admin
+│   │   ├── User-Stories.md             # User story format
+│   │   ├── Functional-Requirements.md   # Detailed list of features
+│   │   ├── Non-Functional-Requirements.md # Performance, security, usability
+│   │   └── Data-Requirements.md         # What data needs to be stored
+│   ├── Workflows/
+│   │   ├── Development-Workflow.md      # Development process
+│   │   ├── Testing-Workflow.md         # Testing process
+│   │   ├── Deployment-Workflow.md       # Deployment process
+│   │   ├── Task-Management.md          # Task management process
+│   │   └── Code-Review.md              # Code review process
+│   └── Integrations/
+│       └── Payment-Gateway.md          # Payment gateway integration details
+├── Memory Bank/
+│   ├── Active State.md                ✅ # Current project status, next steps - UPDATED
+│   ├── Implementation-Checklist.md      ✅ # Pending tasks, progress tracking - UPDATED
+│   ├── System Context.md              ✅ # High-level architecture, tech stack - UPDATED
+│   ├── Architecture Decisions.md       # Important architectural decisions
+│   ├── Implementation Insights.md      # Deep dives into specific implementations
+│   ├── Migration-Plan.md              # Plan for database migrations
+│   ├── db-comparison.md               # Database comparison
+│   ├── Project-Roadmap.md             # Overall project timeline
+│   ├── Daily/
+│   │   └── Daily-Note-Template.md      # Template for daily notes
+│   ├── Reference/
+│   │   ├── Frontend Framework/
+│   │   │   ├── Next.js.md              # Notes about Next.js
+│   │   │   ├── React.md
+│   │   │   ├── RadixUI.md
+│   │   │   ├── TailwindCSS.md
+│   │   │   ├── Zustand.md
+│   │   │   ├── TanStack Query.md
+│   │   │   ├── Pages/
+│   │   │   │   ├── Guest-Homepage.md    # Guest Homepage
+│   │   │   │   ├── About.md             # About Page
+│   │   │   │   ├── Contact.md           # Contact Page
+│   │   │   │   ├── Resources.md         # Resources Page
+│   │   │   │   ├── Community.md         # Community Page
+│   │   │   │   ├── Marketplace.md       # Marketplace Page
+│   │   │   │   ├── Product-Details.md   # Product Details Page
+│   │   │   │   ├── User-Homepage.md     # User Homepage
+│   │   │   │   ├── Chatbot.md           # Chatbot Page
+│   │   │   │   └── ...                  # Other Pages
+│   │   │   └── Components/
+│   │   │       ├── Navigation-Bar.md   # Navigation Bar component
+│   │   │       ├── Side-Bar.md          # Side Bar component
+│   │   │       ├── Product-Card.md      # Product Card component
+│   │   │       └── ...                  # Other Components
+│   │   ├── Backend Framework/
+│   │   │   ├── Express.js.md           # Notes about Express.js
+│   │   │   ├── TypeScript.md
+│   │   │   ├── Node.js.md
+│   │   │   └── REST-API.md             # REST API guidelines
+│   │   ├── Database/
+│   │   │   ├── MongoDB.md              # Notes about MongoDB
+│   │   │   ├── Prisma.md               # Notes about Prisma
+│   │   │   ├── Schema Design.md         # Database schema design
+│   │   │   ├── Data-Modeling.md        # Data modeling
+│   │   │   └── PostgreSQL.md           # Notes about PostgreSQL
+│   │   ├── Security/
+│   │   │   ├── Authentication.md       # Authentication mechanisms
+│   │   │   ├── Authorization.md        # Authorization mechanisms
+│   │   │   ├── JWT.md
+│   │   │   ├── OAuth.md
+│   │   │   ├── Data-Encryption.md      # Data encryption
+│   │   │   └── Input-Validation.md     # Input validation
+│   │   ├── Patterns/
+│   │   │   ├── Error-Handling.md
+│   │   │   ├── Api-Validation.md
+│   │   │   ├── Caching-Strategy.md
+│   │   │   ├── Rate-Limiting.md
+│   │   │   └── Microservices.md         # Microservices architecture
+│   │   └── Concepts/
+│   │       ├── Data-Fetching.md         # Data fetching strategies
+│   │       └── State-Management.md      # State management strategies
+│   ├── Templates/
+│   │   ├── Meeting-Note-Template.md    # Template for meeting notes
+│   │   └── Daily-Note-Template.md      # Template for daily notes
+│   ├── Archives/
+│   │   └── ...                         # Archived notes
+│   └── Scripts/
+│       └── sync-system-context.ts      # Script to synchronize system context
+└── .obsidian/

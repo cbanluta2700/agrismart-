@@ -1,0 +1,62 @@
+{
+  "functions": {
+    "app/api/forum/comments/route.ts": {
+      "runtime": "edge",
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "app/api/moderation/queue/route.ts": {
+      "runtime": "edge",
+      "memory": 256
+    },
+    "middleware/moderationMiddleware.ts": {
+      "runtime": "edge",
+      "memory": 128
+    },
+    "app/api/moderation/cleanup/route.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    },
+    "app/api/admin/analytics/moderation/route.ts": {
+      "memory": 1024,
+      "maxDuration": 15
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/moderation/cleanup",
+      "schedule": "0 0 * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/forum/comments",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "s-maxage=60, stale-while-revalidate=30"
+        },
+        {
+          "key": "x-vercel-cache-control-allow-purge",
+          "value": "true"
+        }
+      ]
+    },
+    {
+      "source": "/api/admin/analytics/moderation",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "s-maxage=300, stale-while-revalidate=60"
+        },
+        {
+          "key": "x-vercel-cache-control-allow-purge",
+          "value": "true"
+        }
+      ]
+    }
+  ],
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install"
+}

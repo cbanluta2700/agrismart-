@@ -1,0 +1,87 @@
+{
+  "name": "add_moderation_history",
+  "description": "Schema for adding a moderation history entry",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for this history entry",
+      "required": true
+    },
+    "moderationItemId": {
+      "type": "string",
+      "description": "ID of the moderation item this history relates to",
+      "required": true,
+      "relationship": {
+        "edgeType": "belongs_to",
+        "description": "The moderation item this history entry belongs to"
+      }
+    },
+    "action": {
+      "type": "string",
+      "description": "Action taken in this history entry",
+      "required": true,
+      "relationship": {
+        "edgeType": "took_action",
+        "description": "The action that was taken"
+      }
+    },
+    "fromStatus": {
+      "type": "string",
+      "description": "Status before this action was taken",
+      "required": true,
+      "relationship": {
+        "edgeType": "changed_from",
+        "description": "The status before the change"
+      }
+    },
+    "toStatus": {
+      "type": "string",
+      "description": "Status after this action was taken",
+      "required": true,
+      "relationship": {
+        "edgeType": "changed_to",
+        "description": "The status after the change"
+      }
+    },
+    "moderatorId": {
+      "type": "string",
+      "description": "ID of the moderator who took this action",
+      "required": false
+    },
+    "moderatorName": {
+      "type": "string",
+      "description": "Name of the moderator who took this action",
+      "required": false
+    },
+    "notes": {
+      "type": "string",
+      "description": "Notes provided by the moderator for this action",
+      "required": false
+    },
+    "contentEdits": {
+      "type": "string",
+      "description": "JSON string of any edits made to the content",
+      "required": false
+    },
+    "createdAt": {
+      "type": "string",
+      "description": "Date and time when this history entry was created",
+      "required": true
+    },
+    "aiAssisted": {
+      "type": "string",
+      "description": "Whether AI assistance was used in this decision",
+      "required": true,
+      "enum": [
+        "true",
+        "false"
+      ]
+    },
+    "timeTakenMs": {
+      "type": "string",
+      "description": "Time taken to make the decision in milliseconds",
+      "required": false
+    }
+  },
+  "additionalProperties": true
+}

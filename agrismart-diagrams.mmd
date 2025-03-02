@@ -1,0 +1,627 @@
+I'll create more detailed Mermaid diagrams that better represent the actual flow of the AgriSmart project's codebase, including separate diagrams for frontend, backend, and the overall system architecture.
+
+## 1. Overall System Architecture
+
+````mermaid path=agrismart-system-architecture.mmd mode=EDIT
+graph TB
+    subgraph "Client Layer"
+        NextJS[Next.js Application]
+        subgraph "Frontend Components"
+            Pages[Pages]
+            Components[UI Components]
+            Hooks[Custom Hooks]
+            State[Recoil State]
+        end
+    end
+
+    subgraph "API Layer"
+        APIRoutes[Next.js API Routes]
+        Middleware[Middleware]
+        APIGateway[API Gateway]
+    end
+
+    subgraph "Service Layer"
+        AuthService[Authentication Service]
+        FarmService[Farm Management Service]
+        CropService[Crop Management Service]
+        MarketplaceService[Marketplace Service]
+        SensorService[Sensor Data Service]
+        ChatService[Chat Service]
+    end
+
+    subgraph "Data Layer"
+        Prisma[Prisma ORM]
+        DB[(PostgreSQL)]
+        Redis[(Redis Cache)]
+        S3[(S3 Storage)]
+    end
+
+    subgraph "Infrastructure"
+        K8s[Kubernetes]
+        Monitoring[Prometheus/Grafana]
+        Logging[Fluentd/Elasticsearch/Kibana]
+    end
+
+    %% Client Layer Connections
+    Pages --> Components
+    Components --> Hooks
+    Hooks --> State
+    State --> APIRoutes
+
+    %% API Layer Connections
+    APIRoutes --> Middleware
+    Middleware --> APIGateway
+    APIGateway --> AuthService
+    APIGateway --> FarmService
+    APIGateway --> CropService
+    APIGateway --> MarketplaceService
+    APIGateway --> SensorService
+    APIGateway --> ChatService
+
+    %% Service Layer Connections
+    AuthService --> Prisma
+    FarmService --> Prisma
+    CropService --> Prisma
+    MarketplaceService --> Prisma
+    SensorService --> Prisma
+    ChatService --> Prisma
+    
+    AuthService --> Redis
+    MarketplaceService --> Redis
+    SensorService --> Redis
+    ChatService --> Redis
+    
+    MarketplaceService --> S3
+    SensorService --> S3
+
+    %% Data Layer Connections
+    Prisma --> DB
+
+    %% Infrastructure Connections
+    K8s --> NextJS
+    K8s --> APIGateway
+    Monitoring --> K8s
+    Logging --> K8s
+````
+
+## 2. Frontend Architecture
+
+````mermaid path=agrismart-frontend-architecture.mmd mode=EDIT
+graph TD
+    subgraph "Next.js Application"
+        RootLayout[RootLayout app/layout.tsx]
+        Providers[app/providers.tsx]
+        
+        subgraph "Pages"
+            Home[Homepage app/page.tsx]
+            Dashboard[Dashboard /dashboard]
+            Marketplace[Marketplace /marketplace]
+            Chat[Chat System /chat]
+            Auth[Authentication /auth]
+            Monitoring[Monitoring /monitoring]
+            Community[Community /community]
+        end
+        
+        subgraph "Components"
+            UI[UI Components]
+            Forms[Form Components]
+            Charts[Chart Components]
+            Maps[Map Components]
+            Tables[Table Components]
+            Modals[Modal Components]
+        end
+        
+        subgraph "Hooks"
+            UseAuth[use-auth.ts]
+            UseChat[use-chat.ts]
+            UseDashboard[use-dashboard-stats.ts]
+            UseNotifications[use-notifications.ts]
+            UseFarm[use-farm.ts]
+            UseCrop[use-crop.ts]
+            UseSensor[use-sensor.ts]
+        end
+        
+        subgraph "State Management"
+            RecoilStore[Recoil Store]
+            AuthState[Authentication State]
+            UserState[User State]
+            FarmState[Farm State]
+            CropState[Crop State]
+            SensorState[Sensor State]
+            NotificationState[Notification State]
+        end
+    end
+    
+    subgraph "API Client"
+        APIClient[API Client]
+        AuthAPI[Auth API]
+        FarmAPI[Farm API]
+        CropAPI[Crop API]
+        MarketplaceAPI[Marketplace API]
+        SensorAPI[Sensor API]
+        ChatAPI[Chat API]
+    end
+    
+    %% Root Layout Connections
+    RootLayout --> Providers
+    Providers --> Pages
+    
+    %% Page Connections
+    Home --> UI
+    Dashboard --> UI
+    Dashboard --> Charts
+    Dashboard --> Maps
+    Dashboard --> Tables
+    Marketplace --> UI
+    Marketplace --> Forms
+    Chat --> UI
+    Auth --> UI
+    Auth --> Forms
+    Monitoring --> UI
+    Monitoring --> Charts
+    Community --> UI
+    
+    %% Component Connections
+    UI --> Hooks
+    Forms --> Hooks
+    Charts --> Hooks
+    Maps --> Hooks
+    Tables --> Hooks
+    Modals --> Hooks
+    
+    %% Hook Connections
+    UseAuth --> RecoilStore
+    UseChat --> RecoilStore
+    UseDashboard --> RecoilStore
+    UseNotifications --> RecoilStore
+    UseFarm --> RecoilStore
+    UseCrop --> RecoilStore
+    UseSensor --> RecoilStore
+    
+    %% State Connections
+    RecoilStore --> AuthState
+    RecoilStore --> UserState
+    RecoilStore --> FarmState
+    RecoilStore --> CropState
+    RecoilStore --> SensorState
+    RecoilStore --> NotificationState
+    
+    %% API Connections
+    UseAuth --> AuthAPI
+    UseChat --> ChatAPI
+    UseDashboard --> FarmAPI
+    UseDashboard --> CropAPI
+    UseDashboard --> SensorAPI
+    UseNotifications --> AuthAPI
+    UseFarm --> FarmAPI
+    UseCrop --> CropAPI
+    UseSensor --> SensorAPI
+    
+    %% API Client Connections
+    AuthAPI --> APIClient
+    FarmAPI --> APIClient
+    CropAPI --> APIClient
+    MarketplaceAPI --> APIClient
+    SensorAPI --> APIClient
+    ChatAPI --> APIClient
+````
+
+## 3. Backend Architecture
+
+````mermaid path=agrismart-backend-architecture.mmd mode=EDIT
+graph TD
+    subgraph "API Routes Layer"
+        AuthRoutes[/api/auth/*]
+        FarmRoutes[/api/farms/*]
+        CropRoutes[/api/crops/*]
+        MarketplaceRoutes[/api/marketplace/*]
+        SensorRoutes[/api/sensors/*]
+        ChatRoutes[/api/chat/*]
+        UserRoutes[/api/users/*]
+    end
+    
+    subgraph "Middleware Layer"
+        AuthMiddleware[Authentication Middleware]
+        RateLimitMiddleware[Rate Limiting]
+        LoggingMiddleware[Logging Middleware]
+        ErrorHandlingMiddleware[Error Handling]
+    end
+    
+    subgraph "Controller Layer"
+        AuthController[Authentication Controller]
+        FarmController[Farm Controller]
+        CropController[Crop Controller]
+        MarketplaceController[Marketplace Controller]
+        SensorController[Sensor Controller]
+        ChatController[Chat Controller]
+        UserController[User Controller]
+    end
+    
+    subgraph "Service Layer"
+        AuthService[Authentication Service]
+        FarmService[Farm Management Service]
+        CropService[Crop Management Service]
+        MarketplaceService[Marketplace Service]
+        SensorService[Sensor Data Service]
+        ChatService[Chat Service]
+        UserService[User Service]
+        EmailService[Email Service]
+        StorageService[Storage Service]
+        NotificationService[Notification Service]
+    end
+    
+    subgraph "Data Access Layer"
+        PrismaClient[Prisma Client]
+        RedisClient[Redis Client]
+        S3Client[S3 Client]
+    end
+    
+    subgraph "External Services"
+        DB[(PostgreSQL)]
+        Redis[(Redis)]
+        S3[(S3 Storage)]
+        EmailProvider[Email Provider]
+    end
+    
+    %% API Routes Connections
+    AuthRoutes --> AuthMiddleware
+    FarmRoutes --> AuthMiddleware
+    CropRoutes --> AuthMiddleware
+    MarketplaceRoutes --> AuthMiddleware
+    SensorRoutes --> AuthMiddleware
+    ChatRoutes --> AuthMiddleware
+    UserRoutes --> AuthMiddleware
+    
+    %% Middleware Connections
+    AuthMiddleware --> RateLimitMiddleware
+    RateLimitMiddleware --> LoggingMiddleware
+    LoggingMiddleware --> ErrorHandlingMiddleware
+    
+    %% Controller Connections
+    ErrorHandlingMiddleware --> AuthController
+    ErrorHandlingMiddleware --> FarmController
+    ErrorHandlingMiddleware --> CropController
+    ErrorHandlingMiddleware --> MarketplaceController
+    ErrorHandlingMiddleware --> SensorController
+    ErrorHandlingMiddleware --> ChatController
+    ErrorHandlingMiddleware --> UserController
+    
+    %% Service Connections
+    AuthController --> AuthService
+    FarmController --> FarmService
+    CropController --> CropService
+    MarketplaceController --> MarketplaceService
+    SensorController --> SensorService
+    ChatController --> ChatService
+    UserController --> UserService
+    
+    AuthService --> EmailService
+    AuthService --> NotificationService
+    FarmService --> NotificationService
+    MarketplaceService --> StorageService
+    MarketplaceService --> EmailService
+    SensorService --> NotificationService
+    ChatService --> NotificationService
+    UserService --> EmailService
+    
+    %% Data Access Connections
+    AuthService --> PrismaClient
+    FarmService --> PrismaClient
+    CropService --> PrismaClient
+    MarketplaceService --> PrismaClient
+    SensorService --> PrismaClient
+    ChatService --> PrismaClient
+    UserService --> PrismaClient
+    
+    AuthService --> RedisClient
+    ChatService --> RedisClient
+    NotificationService --> RedisClient
+    
+    StorageService --> S3Client
+    
+    %% External Service Connections
+    PrismaClient --> DB
+    RedisClient --> Redis
+    S3Client --> S3
+    EmailService --> EmailProvider
+````
+
+## 4. Data Flow Sequence Diagram
+
+````mermaid path=agrismart-data-flow-sequence.mmd mode=EDIT
+sequenceDiagram
+    participant Client as Client (Browser)
+    participant NextJS as Next.js App
+    participant APIRoute as API Route
+    participant Middleware as Middleware
+    participant Controller as Controller
+    participant Service as Service
+    participant Cache as Redis Cache
+    participant ORM as Prisma ORM
+    participant DB as Database
+    
+    Client->>NextJS: User Action (e.g., View Farm)
+    NextJS->>NextJS: Update Local State
+    NextJS->>APIRoute: API Request (GET /api/farms/123)
+    APIRoute->>Middleware: Process Request
+    Middleware->>Middleware: Authenticate User
+    Middleware->>Middleware: Rate Limit Check
+    Middleware->>Controller: Forward Request
+    Controller->>Service: getFarmById(123)
+    
+    Service->>Cache: Check Cache
+    alt Cache Hit
+        Cache-->>Service: Return Cached Data
+    else Cache Miss
+        Service->>ORM: Query Farm Data
+        ORM->>DB: SQL Query
+        DB-->>ORM: Return Data
+        ORM-->>Service: Return Farm Object
+        Service->>Cache: Store in Cache
+    end
+    
+    Service-->>Controller: Return Farm Data
+    Controller-->>APIRoute: Format Response
+    APIRoute-->>NextJS: JSON Response
+    NextJS->>NextJS: Update Recoil State
+    NextJS-->>Client: Render Updated UI
+````
+
+## 5. User Role-Based Access Flow
+
+````mermaid path=agrismart-role-based-flow.mmd mode=EDIT
+graph TD
+    subgraph "User Roles"
+        Guest[Guest User]
+        Buyer[Buyer]
+        Seller[Seller]
+        Admin[Admin]
+    end
+    
+    subgraph "Authentication Flow"
+        Login[Login]
+        Register[Register]
+        Verify[Verify Email]
+        Reset[Reset Password]
+        Logout[Logout]
+    end
+    
+    subgraph "Access Control"
+        AuthGuard[Authentication Guard]
+        RoleGuard[Role-Based Guard]
+        PermissionCheck[Permission Check]
+    end
+    
+    subgraph "Available Features"
+        PublicFeatures[Public Features]
+        BuyerFeatures[Buyer Features]
+        SellerFeatures[Seller Features]
+        AdminFeatures[Admin Features]
+    end
+    
+    %% Authentication Flow
+    Guest --> Login
+    Guest --> Register
+    Register --> Verify
+    Login --> Buyer
+    Login --> Seller
+    Login --> Admin
+    Buyer --> Logout
+    Seller --> Logout
+    Admin --> Logout
+    Logout --> Guest
+    
+    %% Access Control
+    Buyer --> AuthGuard
+    Seller --> AuthGuard
+    Admin --> AuthGuard
+    AuthGuard --> RoleGuard
+    RoleGuard --> PermissionCheck
+    
+    %% Feature Access
+    Guest --> PublicFeatures
+    PermissionCheck --> BuyerFeatures
+    PermissionCheck --> SellerFeatures
+    PermissionCheck --> AdminFeatures
+    
+    %% Public Features
+    PublicFeatures --> Homepage[Homepage]
+    PublicFeatures --> About[About]
+    PublicFeatures --> Contact[Contact]
+    PublicFeatures --> Resources[Resources]
+    PublicFeatures --> MarketplaceView[Marketplace View-Only]
+    PublicFeatures --> CommunityView[Community View-Only]
+    PublicFeatures --> LimitedChat[Limited Chatbot]
+    
+    %% Buyer Features
+    BuyerFeatures --> Dashboard[Dashboard]
+    BuyerFeatures --> Calendar[Calendar]
+    BuyerFeatures --> Messages[Messages]
+    BuyerFeatures --> Fields[Fields]
+    BuyerFeatures --> MarketplaceBuy[Marketplace Buy]
+    BuyerFeatures --> Team[Team]
+    BuyerFeatures --> CommunityInteract[Community Interact]
+    BuyerFeatures --> Profile[Profile & Settings]
+    BuyerFeatures --> FullChat[Full Chatbot]
+    
+    %% Seller Features
+    SellerFeatures --> SellerDashboard[Seller Dashboard]
+    SellerFeatures --> Analytics[Analytics]
+    SellerFeatures --> ProductManagement[Product Management]
+    SellerFeatures --> SellerSettings[Seller Settings]
+    SellerFeatures --> MarketplaceManage[Marketplace Management]
+    
+    %% Admin Features
+    AdminFeatures --> AdminDashboard[Admin Dashboard]
+    AdminFeatures --> UserManagement[User Management]
+    AdminFeatures --> SystemMonitoring[System Monitoring]
+    AdminFeatures --> AdminChat[Admin Chat]
+    AdminFeatures --> Reports[Reports Interface]
+````
+
+## 6. Monitoring and Infrastructure Flow
+
+````mermaid path=agrismart-monitoring-infrastructure.mmd mode=EDIT
+graph TD
+    subgraph "Application"
+        App[AgriSmart Application]
+        API[API Services]
+        Worker[Background Workers]
+    end
+    
+    subgraph "Monitoring"
+        Prometheus[Prometheus]
+        Grafana[Grafana]
+        AlertManager[Alert Manager]
+    end
+    
+    subgraph "Logging"
+        Fluentd[Fluentd]
+        Elasticsearch[Elasticsearch]
+        Kibana[Kibana]
+    end
+    
+    subgraph "Infrastructure"
+        K8s[Kubernetes]
+        Docker[Docker Containers]
+        NGINX[NGINX]
+        PgBouncer[PgBouncer]
+    end
+    
+    subgraph "Storage"
+        DB[(PostgreSQL)]
+        Redis[(Redis)]
+        S3[(S3 Storage)]
+    end
+    
+    %% Application Metrics
+    App --> Prometheus
+    API --> Prometheus
+    Worker --> Prometheus
+    
+    %% Application Logs
+    App --> Fluentd
+    API --> Fluentd
+    Worker --> Fluentd
+    
+    %% Monitoring Flow
+    Prometheus --> Grafana
+    Prometheus --> AlertManager
+    AlertManager --> Notification[Notifications]
+    
+    %% Logging Flow
+    Fluentd --> Elasticsearch
+    Elasticsearch --> Kibana
+    
+    %% Infrastructure Management
+    K8s --> App
+    K8s --> API
+    K8s --> Worker
+    Docker --> K8s
+    NGINX --> K8s
+    
+    %% Storage Access
+    App --> PgBouncer
+    API --> PgBouncer
+    Worker --> PgBouncer
+    PgBouncer --> DB
+    
+    App --> Redis
+    API --> Redis
+    Worker --> Redis
+    
+    App --> S3
+    API --> S3
+    Worker --> S3
+````
+
+## 7. Complete System Data Flow
+
+````mermaid path=agrismart-complete-system-flow.mmd mode=EDIT
+graph TB
+    %% User Interaction
+    User[User] --> Browser[Web Browser]
+    Browser --> NextJS[Next.js Frontend]
+    
+    %% Frontend Components
+    NextJS --> Pages[Pages]
+    NextJS --> Components[Components]
+    NextJS --> Hooks[Custom Hooks]
+    NextJS --> State[Recoil State]
+    
+    %% API Communication
+    Hooks --> APIClient[API Client]
+    State --> APIClient
+    
+    %% Backend Entry Points
+    APIClient --> APIRoutes[API Routes]
+    APIClient --> WebSockets[WebSocket Connection]
+    
+    %% Middleware Processing
+    APIRoutes --> Middleware[Middleware Stack]
+    WebSockets --> WSMiddleware[WebSocket Middleware]
+    
+    %% Controller Layer
+    Middleware --> Controllers[Controllers]
+    WSMiddleware --> WSControllers[WebSocket Controllers]
+    
+    %% Service Layer
+    Controllers --> Services[Services]
+    WSControllers --> Services
+    
+    %% Cross-Cutting Concerns
+    Services --> Auth[Authentication]
+    Services --> Cache[Caching]
+    Services --> Validation[Validation]
+    Services --> Logging[Logging]
+    
+    %% Data Access
+    Services --> ORM[Prisma ORM]
+    Services --> RedisClient[Redis Client]
+    Services --> S3Client[S3 Client]
+    Services --> EmailClient[Email Client]
+    
+    %% External Systems
+    ORM --> Database[(PostgreSQL)]
+    RedisClient --> RedisDB[(Redis)]
+    S3Client --> S3Storage[(S3 Storage)]
+    EmailClient --> EmailProvider[Email Provider]
+    
+    %% Background Processing
+    Services --> Queue[Job Queue]
+    Queue --> Workers[Background Workers]
+    Workers --> ORM
+    Workers --> RedisClient
+    Workers --> S3Client
+    Workers --> EmailClient
+    
+    %% Monitoring & Observability
+    NextJS --> FrontendMetrics[Frontend Metrics]
+    APIRoutes --> BackendMetrics[Backend Metrics]
+    Services --> ServiceMetrics[Service Metrics]
+    Workers --> WorkerMetrics[Worker Metrics]
+    
+    FrontendMetrics --> Monitoring[Monitoring System]
+    BackendMetrics --> Monitoring
+    ServiceMetrics --> Monitoring
+    WorkerMetrics --> Monitoring
+    
+    %% Infrastructure
+    Kubernetes[Kubernetes] --> NextJS
+    Kubernetes --> APIRoutes
+    Kubernetes --> WebSockets
+    Kubernetes --> Workers
+    Kubernetes --> Monitoring
+````
+
+These diagrams provide a comprehensive view of the AgriSmart codebase architecture and flow. They cover:
+
+1. **Overall System Architecture**: Shows the main layers and their interactions
+2. **Frontend Architecture**: Details the Next.js application structure and component relationships
+3. **Backend Architecture**: Illustrates the API routes, controllers, services, and data access layers
+4. **Data Flow Sequence**: Demonstrates the request/response cycle through the system
+5. **Role-Based Access Flow**: Shows how different user roles access different features
+6. **Monitoring and Infrastructure**: Illustrates the monitoring, logging, and infrastructure components
+7. **Complete System Data Flow**: Provides a holistic view of data flow through the entire system
+
+These diagrams represent the actual flow of the codebase based on the information provided in the excerpts, showing how the different components interact with each other in the AgriSmart application.

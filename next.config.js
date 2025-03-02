@@ -1,51 +1,66 @@
+// This file sets up the configuration for Next.js
+const { withSentryConfig } = require('@sentry/nextjs');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  images: {
-    domains: [
-      'placehold.co', // For placeholder images
-      'localhost', // For local development
-      'res.cloudinary.com', // For future cloud storage
-    ],
-  },
-  // Correctly proxy API requests to the backend
-  async rewrites() {
-    if (process.env.NODE_ENV === 'development') {
-      return [
-        {
-          source: '/api/v1/:path*',
-          destination: 'http://localhost:5000/api/v1/:path*',
-        },
-      ];
-    }
+  reactStrictMode: true,
+  swcMinify: true,
+  poweredByHeader: false,
+  
+  // Enable source maps in production
+  productionBrowserSourceMaps: true,
+
+  // Configure redirects and rewrites if needed
+  async redirects() {
     return [];
   },
-  // Add custom headers for development
+
+  async rewrites() {
+    return [];
+  },
+
+  // Security headers
   async headers() {
     return [
       {
-        // Apply these headers to all routes
         source: '/:path*',
         headers: [
           {
-            key: 'Access-Control-Allow-Credentials',
-            value: 'true',
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on'
           },
           {
-            key: 'Access-Control-Allow-Origin',
-            value: 'http://localhost:3000',
+            key: 'X-XSS-Protection',
+            value: '1; mode=block'
           },
           {
-            key: 'Access-Control-Allow-Methods',
-            value: 'GET,DELETE,PATCH,POST,PUT',
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN'
           },
           {
-            key: 'Access-Control-Allow-Headers',
-            value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version',
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
           },
-        ],
-      },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin'
+          }
+        ]
+      }
     ];
-  },
+  }
 };
 
-module.exports = nextConfig;
+// Sentry configuration
+const sentryWebpackPluginOptions = {
+  silent: true,
+  hideSourceMaps: true,
+  // For all available options, see:
+  // https://github.com/getsentry/sentry-webpack-plugin#options
+};
+
+// Export configuration with Sentry
+module.exports = withSentryConfig(
+  nextConfig,
+  sentryWebpackPluginOptions
+);

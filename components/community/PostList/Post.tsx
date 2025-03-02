@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Post as PostType, PostMedia } from '../../../shared/types/post';
 import { formatDistanceToNow } from 'date-fns';
 import CommentList from './CommentList';
 import CommentInput from './CommentInput';
+import ReportButton from '@/components/reports/report-button';
+import useAnalytics from '@/hooks/useAnalytics';
 
 export interface PostProps {
   post: PostType;
   currentUserId: string;
+  groupId: string;
   onDelete: (id: string) => void;
   onLike: (id: string) => void;
   onComment: (postId: string, content: string) => void;
@@ -17,6 +20,7 @@ export interface PostProps {
 const Post: React.FC<PostProps> = ({
   post,
   currentUserId,
+  groupId,
   onDelete,
   onLike,
   onComment,
@@ -24,6 +28,12 @@ const Post: React.FC<PostProps> = ({
   isLoading = false
 }) => {
   const isAuthor = post.authorId === currentUserId;
+  const analytics = useAnalytics();
+
+  // Track post view when component mounts
+  useEffect(() => {
+    analytics.trackPostView(post.id, groupId);
+  }, [post.id, groupId, analytics]);
 
   const renderMedia = (media: PostMedia) => {
     if (media.type === 'image') {
@@ -51,6 +61,17 @@ const Post: React.FC<PostProps> = ({
     return null;
   };
 
+  const handleLike = (id: string) => {
+    onLike(id);
+    analytics.trackPostLike(id, groupId);
+  };
+
+  const handleComment = (postId: string, content: string) => {
+    onComment(postId, content);
+    // Note: we'd ideally track the comment creation here, but we don't have the comment ID
+    // We'll rely on the API response to get the comment ID for tracking
+  };
+
   return (
     <div className="bg-white rounded-lg shadow p-4 mb-4">
       {/* Post Header */}
@@ -64,14 +85,22 @@ const Post: React.FC<PostProps> = ({
             </p>
           </div>
         </div>
-        {isAuthor && (
-          <button
-            onClick={() => onDelete(post.id)}
-            className="text-red-500 hover:text-red-700"
-          >
-            Delete
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {isAuthor && (
+            <button
+              onClick={() => onDelete(post.id)}
+              className="text-red-500 hover:text-red-700"
+            >
+              Delete
+            </button>
+          )}
+          <ReportButton 
+            itemType="POST" 
+            itemId={post.id} 
+            groupId={groupId} 
+            size="sm"
+          />
+        </div>
       </div>
 
       {/* Post Content */}
@@ -103,7 +132,7 @@ const Post: React.FC<PostProps> = ({
       {/* Post Actions */}
       <div className="flex items-center gap-4 mb-4">
         <button
-          onClick={() => onLike(post.id)}
+          onClick={() => handleLike(post.id)}
           className={`flex items-center gap-1 ${
             post.likes.includes(currentUserId)
               ? 'text-blue-500'
@@ -125,10 +154,11 @@ const Post: React.FC<PostProps> = ({
           comments={post.comments}
           currentUserId={currentUserId}
           onDelete={(commentId) => onDeleteComment(post.id, commentId)}
+          groupId={groupId}
         />
         <CommentInput
           postId={post.id}
-          onSubmit={onComment}
+          onSubmit={(content) => handleComment(post.id, content)}
           disabled={isLoading}
         />
       </div>

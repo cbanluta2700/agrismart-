@@ -1,99 +1,139 @@
-import { useState } from 'react';
-import { useQuery, useMutation, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
-import { AxiosError } from 'axios';
-import axios from '../utils/axios'; // We'll create this next
+import { useState, useCallback } from 'react'
+import { useRecoilState } from 'recoil'
+import { AxiosRequestConfig } from 'axios'
+import apiClient, { ApiResponse, ApiError } from '@/lib/api/client'
+import { authLoadingState } from '@/lib/store/atoms'
 
-interface ApiError {
-  message: string;
-  errors?: Record<string, string[]>;
-  status?: number;
+interface UseApiOptions<T> {
+  onSuccess?: (data: T) => void
+  onError?: (error: ApiError) => void
+  initialData?: T
 }
 
-interface ApiResponse<T> {
-  data: T;
-  message?: string;
+interface ApiState<T> {
+  data: T | null
+  loading: boolean
+  error: ApiError | null
 }
 
-export function useApi<T>(
-  key: string[],
-  url: string,
-  options?: UseQueryOptions<ApiResponse<T>, AxiosError<ApiError>>
-) {
-  return useQuery<ApiResponse<T>, AxiosError<ApiError>>({
-    queryKey: key,
-    queryFn: async () => {
-      const response = await axios.get<ApiResponse<T>>(url);
-      return response.data;
+export function useApi<T = any>(options: UseApiOptions<T> = {}) {
+  const [state, setState] = useState<ApiState<T>>({
+    data: options.initialData || null,
+    loading: false,
+    error: null,
+  })
+
+  const [isAuthLoading, setAuthLoading] = useRecoilState(authLoadingState)
+
+  const execute = useCallback(
+    async (config: AxiosRequestConfig) => {
+      try {
+        setState((prev) => ({ ...prev, loading: true, error: null }))
+        
+        const response = await apiClient(config)
+        const data = response.data
+
+        setState((prev) => ({ ...prev, data, loading: false }))
+        options.onSuccess?.(data)
+        
+        return data
+      } catch (error) {
+        const apiError = error as ApiError
+        setState((prev) => ({ ...prev, error: apiError, loading: false }))
+        options.onError?.(apiError)
+        throw apiError
+      }
     },
-    ...options,
-  });
-}
+    [options]
+  )
 
-export function useApiMutation<TData, TVariables>(
-  url: string,
-  options?: UseMutationOptions<ApiResponse<TData>, AxiosError<ApiError>, TVariables>
-) {
-  const [progress, setProgress] = useState(0);
+  const get = useCallback(
+    <R = T>(url: string, config?: AxiosRequestConfig) =>
+      execute({ ...config, method: 'GET', url }),
+    [execute]
+  )
 
-  return useMutation<ApiResponse<TData>, AxiosError<ApiError>, TVariables>({
-    mutationFn: async (variables) => {
-      const response = await axios.post<ApiResponse<TData>>(url, variables, {
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const percentage = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            setProgress(percentage);
-          }
-        },
-      });
-      return response.data;
-    },
-    ...options,
-  });
-}
+  const post = useCallback(
+    <R = T>(url: string, data?: any, config?: AxiosRequestConfig) =>
+      execute({ ...config, method: 'POST', url, data }),
+    [execute]
+  )
 
-export function useApiPut<TData, TVariables>(
-  url: string,
-  options?: UseMutationOptions<ApiResponse<TData>, AxiosError<ApiError>, TVariables>
-) {
-  return useMutation<ApiResponse<TData>, AxiosError<ApiError>, TVariables>({
-    mutationFn: async (variables) => {
-      const response = await axios.put<ApiResponse<TData>>(url, variables);
-      return response.data;
-    },
-    ...options,
-  });
-}
+  const put = useCallback(
+    <R = T>(url: string, data?: any, config?: AxiosRequestConfig) =>
+      execute({ ...config, method: 'PUT', url, data }),
+    [execute]
+  )
 
-export function useApiDelete<TData>(
-  url: string,
-  options?: UseMutationOptions<ApiResponse<TData>, AxiosError<ApiError>, void>
-) {
-  return useMutation<ApiResponse<TData>, AxiosError<ApiError>, void>({
-    mutationFn: async () => {
-      const response = await axios.delete<ApiResponse<TData>>(url);
-      return response.data;
-    },
-    ...options,
-  });
-}
+  const patch = useCallback(
+    <R = T>(url: string, data?: any, config?: AxiosRequestConfig) =>
+      execute({ ...config, method: 'PATCH', url, data }),
+    [execute]
+  )
 
-// Helper to handle API errors
-export function getErrorMessage(error: unknown): string {
-  if (error instanceof AxiosError) {
-    if (error.response?.data?.message) {
-      return error.response.data.message;
-    }
-    if (error.response?.data?.errors) {
-      return Object.values(error.response.data.errors)
-        .flat()
-        .join(', ');
-    }
-    return error.message;
+  const del = useCallback(
+    <R = T>(url: string, config?: AxiosRequestConfig) =>
+      execute({ ...config, method: 'DELETE', url }),
+    [execute]
+  )
+
+  return {
+    ...state,
+    isAuthLoading,
+    get,
+    post,
+    put,
+    patch,
+    delete: del,
   }
-  if (error instanceof Error) {
-    return error.message;
+}
+
+// Utility hook for protected API calls
+export function useAuthApi<T = any>(options: UseApiOptions<T> = {}) {
+  const api = useApi<T>({
+    ...options,
+    onError: (error) => {
+      if (error.status === 401) {
+        // Handle unauthorized access
+        window.location.href = '/auth/login'
+      }
+      options.onError?.(error)
+    },
+  })
+
+  return api
+}
+
+// Hook for handling API mutations
+export function useApiMutation<T = any, R = any>(
+  url: string,
+  options: UseApiOptions<R> & {
+    method?: 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  } = {}
+) {
+  const api = useApi<R>(options)
+  const { method = 'POST' } = options
+
+  const mutate = useCallback(
+    async (data?: T) => {
+      switch (method) {
+        case 'POST':
+          return api.post(url, data)
+        case 'PUT':
+          return api.put(url, data)
+        case 'PATCH':
+          return api.patch(url, data)
+        case 'DELETE':
+          return api.delete(url)
+        default:
+          throw new Error(`Unsupported method: ${method}`)
+      }
+    },
+    [api, method, url]
+  )
+
+  return {
+    ...api,
+    mutate,
   }
-  return 'An unexpected error occurred';
 }

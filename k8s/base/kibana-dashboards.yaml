@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kibana-dashboards
+  namespace: logging
+  labels:
+    app: agrismart
+    component: monitoring
+data:
+  system-overview.ndjson: |
+    {"attributes":{"title":"AgriSmart System Overview","hits":0,"description":"System-wide metrics for the AgriSmart platform","panelsJSON":"[...]"}}
+  api-performance.ndjson: |
+    {"attributes":{"title":"API Performance Dashboard","hits":0,"description":"API performance metrics across services","panelsJSON":"[...]"}}
+  error-tracking.ndjson: |
+    {"attributes":{"title":"Error Tracking","hits":0,"description":"Error monitoring across AgriSmart services","panelsJSON":"[...]"}}

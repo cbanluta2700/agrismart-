@@ -1,9 +1,13 @@
 import NextAuth from "next-auth";
 import type { NextAuthConfig, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+import FacebookProvider from "next-auth/providers/facebook";
+import GithubProvider from "next-auth/providers/github";
 import { compare } from "bcryptjs";
 import { db } from "@/lib/db";
 import { AuthErrorCode } from "@/lib/types/auth";
+import { generateAccessToken, generateRefreshToken } from "@/lib/auth/token";
 
 // The base user type that matches NextAuth's requirements
 type AuthUser = User & {
@@ -61,6 +65,17 @@ export const options = {
             throw new Error(AuthErrorCode.ACCOUNT_SUSPENDED);
           }
 
+          // Generate tokens
+          const accessToken = generateAccessToken({
+            userId: user.id,
+            email: user.email,
+            role: user.role
+          });
+          
+          const refreshToken = generateRefreshToken({
+            userId: user.id
+          });
+
           // Return user data with required fields
           return {
             id: user.id,
@@ -72,19 +87,53 @@ export const options = {
             status: user.status,
             twoFactorEnabled: false,
             isVerified: user.isVerified,
-            accessToken: "",
-            refreshToken: "",
+            accessToken,
+            refreshToken,
           } as AuthUser;
         } catch (error) {
           console.error("[AUTH_ERROR]", error);
           return null;
         }
       }
+    }),
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
+    }),
+    FacebookProvider({
+      clientId: process.env.FACEBOOK_CLIENT_ID!,
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!
+    }),
+    GithubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!
     })
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      // Allow OAuth sign-in without email verification
+      if (account?.provider !== "credentials") {
+        return true;
+      }
+      
+      return true;
+    },
+    async jwt({ token, user, account, profile, trigger }) {
+      // Initial sign in
       if (user) {
+        // When using credentials provider
+        if (user.accessToken && user.refreshToken) {
+          token.accessToken = user.accessToken;
+          token.refreshToken = user.refreshToken;
+        }
+
         return {
           ...token,
           role: user.role,
@@ -92,10 +141,24 @@ export const options = {
           status: user.status,
           twoFactorEnabled: user.twoFactorEnabled,
           isVerified: user.isVerified,
-          accessToken: user.accessToken,
-          refreshToken: user.refreshToken,
         };
       }
+
+      // Handle token refresh if it's expired
+      const currentTime = Math.floor(Date.now() / 1000);
+      const accessTokenExpiry = token.exp as number;
+
+      if (currentTime > accessTokenExpiry) {
+        try {
+          // This would be where you'd implement token refresh logic
+          // For now, we'll leave it as is since it depends on your backend implementation
+          console.log("Token has expired, would refresh here");
+        } catch (error) {
+          console.error("Failed to refresh token", error);
+          return { ...token, error: "RefreshAccessTokenError" };
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -112,15 +175,48 @@ export const options = {
           accessToken: token.accessToken as string,
           refreshToken: token.refreshToken as string,
         },
+        error: token.error,
       };
     },
   },
+  events: {
+    async signIn({ user, account, isNewUser }) {
+      // Create user in the database if signing in with OAuth and user doesn't exist
+      if (account?.provider !== "credentials" && isNewUser) {
+        try {
+          await db.user.upsert({
+            where: { email: user.email! },
+            update: {
+              name: user.name!,
+              image: user.image,
+              isVerified: true, // Auto-verify OAuth users
+            },
+            create: {
+              email: user.email!,
+              name: user.name!,
+              image: user.image,
+              password: "", // OAuth users don't need a password
+              role: "USER",
+              isVerified: true,
+              status: "active",
+            },
+          });
+          console.log(`Created new user from ${account.provider} OAuth`);
+        } catch (error) {
+          console.error("Error creating user from OAuth", error);
+        }
+      }
+    },
+    async signOut({ session, token }) {
+      // Add any logout cleanup here if needed
+    },
+  },
   pages: {
-    signIn: "/login",
-    signOut: "/logout",
-    error: "/error",
-    verifyRequest: "/verify-email",
-    newUser: "/signup",
+    signIn: "/auth/login",
+    signOut: "/auth/logout",
+    error: "/auth/error",
+    verifyRequest: "/auth/verify-email",
+    newUser: "/auth/register",
   },
   session: {
     strategy: "jwt",

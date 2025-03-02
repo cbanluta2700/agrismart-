@@ -1,0 +1,115 @@
+graph TD
+    subgraph "API Routes Layer"
+        AuthRoutes[/api/auth/*]
+        FarmRoutes[/api/farms/*]
+        CropRoutes[/api/crops/*]
+        MarketplaceRoutes[/api/marketplace/*]
+        SensorRoutes[/api/sensors/*]
+        ChatRoutes[/api/chat/*]
+        UserRoutes[/api/users/*]
+    end
+    
+    subgraph "Middleware Layer"
+        AuthMiddleware[Authentication Middleware]
+        RateLimitMiddleware[Rate Limiting]
+        LoggingMiddleware[Logging Middleware]
+        ErrorHandlingMiddleware[Error Handling]
+    end
+    
+    subgraph "Controller Layer"
+        AuthController[Authentication Controller]
+        FarmController[Farm Controller]
+        CropController[Crop Controller]
+        MarketplaceController[Marketplace Controller]
+        SensorController[Sensor Controller]
+        ChatController[Chat Controller]
+        UserController[User Controller]
+    end
+    
+    subgraph "Service Layer"
+        AuthService[Authentication Service]
+        FarmService[Farm Management Service]
+        CropService[Crop Management Service]
+        MarketplaceService[Marketplace Service]
+        SensorService[Sensor Data Service]
+        ChatService[Chat Service]
+        UserService[User Service]
+        EmailService[Email Service]
+        StorageService[Storage Service]
+        NotificationService[Notification Service]
+    end
+    
+    subgraph "Data Access Layer"
+        PrismaClient[Prisma Client]
+        RedisClient[Redis Client]
+        S3Client[S3 Client]
+    end
+    
+    subgraph "External Services"
+        DB[(PostgreSQL)]
+        Redis[(Redis)]
+        S3[(S3 Storage)]
+        EmailProvider[Email Provider]
+    end
+    
+    %% API Routes Connections
+    AuthRoutes --> AuthMiddleware
+    FarmRoutes --> AuthMiddleware
+    CropRoutes --> AuthMiddleware
+    MarketplaceRoutes --> AuthMiddleware
+    SensorRoutes --> AuthMiddleware
+    ChatRoutes --> AuthMiddleware
+    UserRoutes --> AuthMiddleware
+    
+    %% Middleware Connections
+    AuthMiddleware --> RateLimitMiddleware
+    RateLimitMiddleware --> LoggingMiddleware
+    LoggingMiddleware --> ErrorHandlingMiddleware
+    
+    %% Controller Connections
+    ErrorHandlingMiddleware --> AuthController
+    ErrorHandlingMiddleware --> FarmController
+    ErrorHandlingMiddleware --> CropController
+    ErrorHandlingMiddleware --> MarketplaceController
+    ErrorHandlingMiddleware --> SensorController
+    ErrorHandlingMiddleware --> ChatController
+    ErrorHandlingMiddleware --> UserController
+    
+    %% Service Connections
+    AuthController --> AuthService
+    FarmController --> FarmService
+    CropController --> CropService
+    MarketplaceController --> MarketplaceService
+    SensorController --> SensorService
+    ChatController --> ChatService
+    UserController --> UserService
+    
+    AuthService --> EmailService
+    AuthService --> NotificationService
+    FarmService --> NotificationService
+    MarketplaceService --> StorageService
+    MarketplaceService --> EmailService
+    SensorService --> NotificationService
+    ChatService --> NotificationService
+    UserService --> EmailService
+    
+    %% Data Access Connections
+    AuthService --> PrismaClient
+    FarmService --> PrismaClient
+    CropService --> PrismaClient
+    MarketplaceService --> PrismaClient
+    SensorService --> PrismaClient
+    ChatService --> PrismaClient
+    UserService --> PrismaClient
+    
+    AuthService --> RedisClient
+    ChatService --> RedisClient
+    NotificationService --> RedisClient
+    
+    StorageService --> S3Client
+    
+    %% External Service Connections
+    PrismaClient --> DB
+    RedisClient --> Redis
+    S3Client --> S3
+    EmailService --> EmailProvider

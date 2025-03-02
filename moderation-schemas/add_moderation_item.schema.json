@@ -1,0 +1,85 @@
+{
+  "name": "add_moderation_item",
+  "description": "Schema for adding a moderation queue item",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the moderation item",
+      "required": true
+    },
+    "contentId": {
+      "type": "string",
+      "description": "ID of the content being moderated",
+      "required": true
+    },
+    "contentType": {
+      "type": "string",
+      "description": "Type of content being moderated",
+      "required": true,
+      "relationship": {
+        "edgeType": "has_type",
+        "description": "The type of content this item represents"
+      }
+    },
+    "status": {
+      "type": "string",
+      "description": "Current moderation status",
+      "required": true,
+      "relationship": {
+        "edgeType": "has_status",
+        "description": "The current status of this moderation item"
+      }
+    },
+    "priority": {
+      "type": "string",
+      "description": "Priority level for moderation",
+      "required": true,
+      "enum": [
+        "LOW",
+        "NORMAL",
+        "HIGH",
+        "URGENT"
+      ]
+    },
+    "reporterId": {
+      "type": "string",
+      "description": "ID of the user who reported the content (if any)",
+      "required": false
+    },
+    "reportReason": {
+      "type": "string",
+      "description": "Reason given for the report (if any)",
+      "required": false
+    },
+    "contentSnapshot": {
+      "type": "string",
+      "description": "Snapshot of the content at the time it was flagged",
+      "required": true
+    },
+    "autoFlagged": {
+      "type": "string",
+      "description": "Whether this item was flagged automatically",
+      "required": true,
+      "enum": [
+        "true",
+        "false"
+      ]
+    },
+    "aiConfidenceScore": {
+      "type": "string",
+      "description": "AI confidence score for moderation (if available)",
+      "required": false
+    },
+    "createdAt": {
+      "type": "string",
+      "description": "Date and time when this item was created",
+      "required": true
+    },
+    "assignedModeratorId": {
+      "type": "string",
+      "description": "ID of the moderator assigned to review this item (if any)",
+      "required": false
+    }
+  },
+  "additionalProperties": true
+}

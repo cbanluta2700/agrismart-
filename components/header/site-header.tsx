@@ -7,12 +7,15 @@ import { UserNav } from '@/components/header/user-nav';
 import { Logo } from '@/components/ui/logo';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Search } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 /**
  * Main site header component
  */
 export function SiteHeader() {
   const { user, isLoading } = useAuth();
+  const router = useRouter();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -39,6 +42,15 @@ export function SiteHeader() {
           ) : user ? (
             // Authenticated state
             <div className="flex items-center space-x-4">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => router.push('/search')}
+                className="text-muted-foreground"
+              >
+                <Search className="h-5 w-5" />
+                <span className="sr-only">Search</span>
+              </Button>
               <SecurityStatus />
               <ThemeToggle />
               <UserNav user={user} />
@@ -46,6 +58,15 @@ export function SiteHeader() {
           ) : (
             // Unauthenticated state
             <div className="flex items-center space-x-4">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => router.push('/search')}
+                className="text-muted-foreground"
+              >
+                <Search className="h-5 w-5" />
+                <span className="sr-only">Search</span>
+              </Button>
               <ThemeToggle />
               <div className="hidden sm:flex items-center space-x-2">
                 <Link href="/login">

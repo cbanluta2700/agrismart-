@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:latest
+    container_name: agrismart-postgres
+    environment:
+      POSTGRES_USER: agrismart
+      POSTGRES_PASSWORD: agrismart
+      POSTGRES_DB: agrismart
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agrismart"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    name: agrismart-postgres-data

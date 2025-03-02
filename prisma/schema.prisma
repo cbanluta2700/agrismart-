@@ -13,93 +13,272 @@ enum Role {
   ADMIN
 }
 
-model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  password      String
-  name          String
-  role          Role      @default(USER)
-  avatar        String?
-  phone         String?
-  isActive      Boolean   @default(true)
-  emailVerified Boolean   @default(false)
-  rating        Float?
-  storeInfo     Json?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  products      Product[]
-  reviews       Review[]
-  orders        Order[]
-  messages      Message[]
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
 
+enum ReportItemType {
+  POST
+  COMMENT
+  USER
+}
+
+enum EventType {
+  PAGE_VIEW
+  POST_CREATE
+  POST_VIEW
+  POST_LIKE
+  COMMENT_CREATE
+  COMMENT_LIKE
+  GROUP_JOIN
+  GROUP_CREATE
+  SEARCH_PERFORM
+  REPORT_SUBMIT
+  MODERATION_ACTION
+}
+
+enum ReputationActivityType {
+  RESOURCE_CREATED
+  RESOURCE_UPVOTED
+  COMMENT_UPVOTED
+  ANSWER_HELPFUL
+  ENDORSEMENT_RECEIVED
+  DAILY_LOGIN
+  PROFILE_COMPLETED
+  CREDENTIAL_VERIFIED
+  REPORT_ACCEPTED
+  CONTENT_FEATURED
+  GROUP_CREATED
+  EVENT_ORGANIZED
+  POLL_CREATED
+  SURVEY_COMPLETED
+}
+
+enum TrustLevel {
+  NEW_USER
+  MEMBER
+  ESTABLISHED
+  TRUSTED
+  LEADER
+  EXPERT
+}
+
+enum BadgeCategory {
+  CONTRIBUTOR
+  KNOWLEDGE
+  COMMUNITY
+}
+
+enum ResourceStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+  FEATURED
+}
+
+enum ResourceType {
+  ARTICLE
+  GUIDE
+  VIDEO
+  GLOSSARY
+}
+
+model User {
+  id                   String    @id @default(uuid())
+  name                 String?
+  username             String?   @unique
+  email                String?   @unique
+  emailVerified        DateTime?
+  image                String?
+  role                 String    @default("USER") // "USER", "MODERATOR", "ADMIN", "SUPER_ADMIN"
+  notificationPreferences String? // JSON string for notification preferences
+  reputationPoints     Int       @default(0)
+  trustLevel           TrustLevel @default(NEW_USER)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  
+  // Authentication
+  password          String?
+  accounts          Account[]
+  sessions          Session[]
+  
+  // Content creation and moderation
+  articles          Article[]
+  guides            Guide[]
+  videos            Video[]
+  glossaryTerms     GlossaryTerm[]
+  resources         Resource[]
+  moderatedContent  ModerationLog[]
+  moderatedResources ResourceModerationLog[] @relation("ModeratedResources")
+  products         Product[]
+  orders           Order[]
+  messages         Message[]
+  passwordReset    PasswordReset?
+  verifyToken      VerifyToken?
+  profile          UserProfile?
+  posts            ForumPost[]
+  comments         Comment[]
+  ownedGroups      Group[]
+  memberOf         GroupMember[]
+  notifications    Notification[]
+  analyticsEvents  AnalyticsEvent[]
+  createdReviews   MarketplaceReview[] @relation("UserCreatedReviews")
+  reviewsReceived  MarketplaceReview[] @relation("UserReceivedReviews")
+  reviews          Review[]
+  
+  // Marketplace chat relations
+  marketplaceConversations MarketplaceConversationUser[]
+  marketplaceMessages      MarketplaceMessage[]
+  marketplaceMessageReads  MarketplaceMessageRead[]
+  marketplaceProducts      MarketplaceProduct[]
+  marketplaceBuyerOrders   MarketplaceOrder[]    @relation("BuyerOrders")
+  marketplaceSellerOrders  MarketplaceOrder[]    @relation("SellerOrders")
+  
+  // Marketplace reviews relations
+  marketplaceReviewVotes       MarketplaceReviewVote[]
+  marketplaceReviewResponses   MarketplaceReviewResponse[]
+  
+  // Wishlist relations
+  wishlists                    Wishlist[]
+  wishlistItems                WishlistItem[]
+  productViews                 UserProductView[]
+  
+  // Search analytics relations
+  searchAnalytics          SearchAnalytics[]
+  sellerSearchAnalytics    SearchAnalytics[] @relation("SellerSearchAnalytics")
+  
+  // Reputation system relations
+  reputationActivities     ReputationActivity[]  @relation("UserReputationActivities")
+  earnedBadges             UserBadge[]
+  endorsementsGiven        UserEndorsement[]     @relation("EndorsementGiver")
+  endorsementsReceived     UserEndorsement[]     @relation("EndorsementReceiver")
+  verifiedCredentials      UserCredential[]
+  moderationQueue         ModerationQueue[]
+  moderationHistory       ModerationHistory[]
+  moderationRules         ModerationRule[]
+  
   @@map("users")
 }
 
+model UserProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  bio               String?  @db.Text
+  location          String?
+  website           String?
+  phoneNumber       String?
+  jobTitle          String?
+  company           String?
+  twitter           String?
+  github            String?
+  linkedin          String?
+  theme             String   @default("system")
+  language          String   @default("en")
+  timezone          String?
+  profileVisibility String   @default("public")
+  showEmail         Boolean  @default(false)
+  showLocation      Boolean  @default(true)
+  notifyMarketing   Boolean  @default(false)
+  notifySecurity    Boolean  @default(true)
+  notifyUpdates     Boolean  @default(true)
+  profileCompleted  Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expires   DateTime
+  email     String   @unique
+  user      User     @relation(fields: [email], references: [email])
+  createdAt DateTime @default(now())
+
+  @@map("password_resets")
+}
+
+model VerifyToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expires   DateTime
+  email     String   @unique
+  user      User     @relation(fields: [email], references: [email])
+  createdAt DateTime @default(now())
+
+  @@map("verify_tokens")
+}
+
 model Category {
-  id          String     @id @default(uuid())
-  name        String     @unique
-  slug        String     @unique
+  id          String            @id @default(uuid())
+  name        String            @unique
+  slug        String            @unique
   description String?
   image       String?
-  isActive    Boolean    @default(true)
+  isActive    Boolean           @default(true)
   parentId    String?
-  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children    Category[] @relation("CategoryHierarchy")
+  parent      Category?         @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[]        @relation("CategoryHierarchy")
   products    CategoryProduct[]
 
   @@map("categories")
 }
 
 model Product {
-  id          String     @id @default(uuid())
+  id          String            @id @default(uuid())
   title       String
-  description String     @db.Text
+  description String            @db.Text
   price       Float
   stock       Int
-  isDigital   Boolean    @default(false)
-  isActive    Boolean    @default(true)
-  isFeatured  Boolean    @default(false)
-  rating      Float      @default(0)
-  views       Int        @default(0)
+  isDigital   Boolean           @default(false)
+  isActive    Boolean           @default(true)
+  isFeatured  Boolean           @default(false)
+  rating      Float             @default(0)
+  views       Int               @default(0)
   images      String[]
   attributes  Json?
   categories  CategoryProduct[]
   sellerId    String
-  seller      User       @relation(fields: [sellerId], references: [id])
+  seller      User              @relation(fields: [sellerId], references: [id])
   orders      Order[]
   reviews     Review[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 
   @@index([sellerId])
   @@map("products")
 }
 
-// Join table for Product and Category
 model CategoryProduct {
-  productId   String
-  categoryId  String
-  product     Product   @relation(fields: [productId], references: [id])
-  category    Category  @relation(fields: [categoryId], references: [id])
-  assignedAt  DateTime  @default(now())
+  productId  String
+  categoryId String
+  product    Product  @relation(fields: [productId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+  assignedAt DateTime @default(now())
 
   @@id([productId, categoryId])
   @@map("category_products")
 }
 
 model Order {
-  id              String    @id @default(uuid())
+  id              String   @id @default(uuid())
   status          String
   total           Float
   quantity        Int
   shippingAddress String?
   paymentMethod   String?
   userId          String
-  user            User      @relation(fields: [userId], references: [id])
+  user            User     @relation(fields: [userId], references: [id])
   productId       String
-  product         Product   @relation(fields: [productId], references: [id])
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  product         Product  @relation(fields: [productId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([userId])
   @@index([productId])
@@ -107,15 +286,15 @@ model Order {
 }
 
 model Review {
-  id          String    @id @default(uuid())
-  rating      Int
-  content     String
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  productId   String
-  product     Product   @relation(fields: [productId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(uuid())
+  rating    Int
+  content   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([productId])
@@ -123,15 +302,1138 @@ model Review {
 }
 
 model Message {
-  id          String    @id @default(uuid())
-  content     String
-  type        String
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  readAt      DateTime?
+  id        String    @id @default(uuid())
+  content   String
+  type      String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  readAt    DateTime?
 
   @@index([userId])
   @@map("messages")
+}
+
+model ForumPost {
+  id        String    @id @default(uuid())
+  title     String
+  content   String    @db.Text
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id])
+  comments  Comment[]
+  groupId   String?
+  group     Group?    @relation(fields: [groupId], references: [id])
+  hidden    Boolean   @default(false)
+  locked    Boolean   @default(false)
+  pinned    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([authorId])
+  @@index([groupId])
+  @@map("forum_posts")
+}
+
+model Comment {
+  id        String    @id @default(uuid())
+  content   String    @db.Text
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id])
+  postId    String
+  post      ForumPost @relation(fields: [postId], references: [id])
+  hidden    Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([authorId])
+  @@index([postId])
+  @@map("comments")
+}
+
+model Group {
+  id              String           @id @default(uuid())
+  name            String
+  description     String?
+  ownerId         String
+  owner           User             @relation(fields: [ownerId], references: [id])
+  members         GroupMember[]
+  posts           ForumPost[]
+  settings        GroupSettings?
+  moderationLogs  ModerationLog[]
+  reports         Report[]
+  analyticsEvents AnalyticsEvent[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  roles           GroupRole[]
+  events          Event[]
+
+  @@index([ownerId])
+  @@map("groups")
+}
+
+model GroupSettings {
+  id                String   @id @default(uuid())
+  groupId           String   @unique
+  allowJoinRequests Boolean  @default(true)
+  requireApproval   Boolean  @default(false)
+  allowMemberPosts  Boolean  @default(true)
+  isPrivate         Boolean  @default(false)
+  rules             String[] @default([])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  group             Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  // Advanced settings
+  allowMemberComments  Boolean  @default(true)
+  enableContentReview  Boolean  @default(false)
+  enableAutoMembership Boolean  @default(false)
+  membershipCriteria   String?
+  joinMessage          String?
+  groupIcon            String?
+  groupBanner          String?
+  customTheme          String?
+  maxMembers           Int?
+  topics               String[] @default([])
+
+  @@map("group_settings")
+}
+
+model GroupRole {
+  id          String              @id @default(uuid())
+  name        String
+  color       String              @default("#4299e1")
+  groupId     String
+  group       Group               @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  priority    Int
+  isDefault   Boolean             @default(false)
+  isOwner     Boolean             @default(false)
+  permissions GroupRolePermission[]
+  members     GroupMember[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([groupId])
+  @@map("group_roles")
+}
+
+model GroupRolePermission {
+  id           String    @id @default(uuid())
+  roleId       String
+  permissionId String
+  role         GroupRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@map("group_role_permissions")
+}
+
+model GroupPermission {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  category    String
+  createdAt   DateTime @default(now())
+
+  @@map("group_permissions")
+}
+
+model GroupMember {
+  id       String    @id @default(uuid())
+  userId   String
+  user     User      @relation(fields: [userId], references: [id])
+  groupId  String
+  group    Group     @relation(fields: [groupId], references: [id])
+  role     String    @default("MEMBER")
+  joinedAt DateTime  @default(now())
+  roleId   String?
+  groupRole GroupRole? @relation(fields: [roleId], references: [id])
+
+  @@index([userId])
+  @@index([groupId])
+  @@index([roleId])
+  @@map("group_members")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // MODERATION, ADMIN_MODERATION, MODERATION_BATCH, ADMIN_MODERATION_BATCH, etc.
+  title     String
+  message   String
+  data      String?  // JSON string with additional data
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([type])
+  @@index([read])
+  @@index([createdAt])
+}
+
+model ModerationLog {
+  id          String   @id @default(uuid())
+  groupId     String
+  moderatorId String
+  moderator   User     @relation(fields: [moderatorId], references: [id])
+  action      String
+  itemType    String
+  itemId      String
+  reason      String?
+  createdAt   DateTime @default(now())
+  group       Group    @relation(fields: [groupId], references: [id])
+
+  @@index([groupId])
+  @@index([moderatorId])
+  @@map("moderation_logs")
+}
+
+model Report {
+  id      String       @id @default(uuid())
+  reason  String
+  details String?
+  status  ReportStatus @default(PENDING)
+
+  // Content being reported
+  itemType ReportItemType
+  itemId   String
+
+  // Reporter and group context
+  reporterId String
+  reporter   User   @relation("UserReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  groupId    String
+  group      Group  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  // Resolution data
+  resolvedById String?
+  resolvedBy   User?   @relation("ReportResolutions", fields: [resolvedById], references: [id])
+  resolution   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([groupId])
+  @@index([reporterId])
+  @@index([itemType, itemId])
+  @@index([status])
+}
+
+model AnalyticsEvent {
+  id         String    @id @default(uuid())
+  type       EventType
+  entityType String // e.g., "post", "comment", "group"
+  entityId   String? // Optional ID of the entity involved
+  userId     String? // Optional user who performed the action
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  groupId    String? // Optional group context
+  group      Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  metadata   Json? // Additional context data
+  timestamp  DateTime  @default(now())
+
+  @@index([type])
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([groupId])
+  @@index([timestamp])
+}
+
+// Marketplace Chat Models
+model MarketplaceConversation {
+  id           String                       @id @default(uuid())
+  participants MarketplaceConversationUser[]
+  messages     MarketplaceMessage[]
+  productId    String?
+  product      MarketplaceProduct?          @relation(fields: [productId], references: [id], onDelete: SetNull)
+  orderId      String?
+  order        MarketplaceOrder?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  createdAt    DateTime                     @default(now())
+  updatedAt    DateTime                     @updatedAt
+
+  @@index([productId])
+  @@index([orderId])
+}
+
+model MarketplaceConversationUser {
+  id             String                  @id @default(uuid())
+  conversationId String
+  conversation   MarketplaceConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime                @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model MarketplaceMessage {
+  id             String                  @id @default(uuid())
+  conversationId String
+  conversation   MarketplaceConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User                    @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content        String                  @db.Text
+  readBy         MarketplaceMessageRead[]
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+model MarketplaceMessageRead {
+  id        String             @id @default(uuid())
+  messageId String
+  message   MarketplaceMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt    DateTime           @default(now())
+
+  @@unique([messageId, userId])
+  @@index([userId])
+}
+
+model MarketplaceProduct {
+  id            String                   @id @default(uuid())
+  name          String
+  description   String                   @db.Text
+  price         Float
+  categoryId    String
+  category      MarketplaceCategory      @relation(fields: [categoryId], references: [id])
+  condition     String
+  images        String[]
+  location      Json?                    // { type: "Point", coordinates: [lng, lat], address: "..." }
+  status        String                   @default("active") // active, pending, sold, inactive
+  sellerId      String
+  seller        User                     @relation(fields: [sellerId], references: [id])
+  conversations MarketplaceConversation[]
+  orders        MarketplaceOrder[]
+  reviews       MarketplaceReview[]
+  wishlistItems WishlistItem[]
+  userViews     UserProductView[]
+  sourceRecommendations ProductRecommendation[] @relation("SourceProduct")
+  targetRecommendations ProductRecommendation[] @relation("RecommendedProduct")
+  seasonalTags   SeasonalProduct[]
+  searchAnalytics SearchAnalytics[]
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  @@index([sellerId])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model MarketplaceCategory {
+  id          String               @id @default(uuid())
+  name        String               @unique
+  description String?
+  products    MarketplaceProduct[]
+  searchAnalytics SearchAnalytics[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
+model MarketplaceOrder {
+  id              String                   @id @default(uuid())
+  productId       String
+  product         MarketplaceProduct       @relation(fields: [productId], references: [id])
+  buyerId         String
+  buyer           User                     @relation("BuyerOrders", fields: [buyerId], references: [id])
+  sellerId        String
+  seller          User                     @relation("SellerOrders", fields: [sellerId], references: [id])
+  quantity        Int                      @default(1)
+  status          String                   @default("pending") // pending, confirmed, shipped, delivered, cancelled
+  totalAmount     Json                     // { amount: 100, currency: "USD" }
+  paymentMethod   String
+  paymentStatus   String                   @default("pending") // pending, paid, refunded
+  shippingAddress Json                     // { street: "", city: "", state: "", country: "", postalCode: "" }
+  trackingNumber  String?
+  notes           String?
+  conversations   MarketplaceConversation[]
+  review          MarketplaceReview?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  @@index([productId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([status])
+}
+
+model MarketplaceReview {
+  id          String          @id @default(uuid())
+  orderId     String          @unique
+  order       MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User            @relation("UserCreatedReviews", fields: [userId], references: [id], onDelete: Cascade)
+  sellerId    String?
+  seller      User?           @relation("UserReceivedReviews", fields: [sellerId], references: [id], onDelete: SetNull)
+  rating      Int             // 1-5 rating
+  title       String?
+  content     String          @db.Text
+  images      String[]        // Optional review images
+  isVerified  Boolean         @default(true) // Always true for order-based reviews
+  status      String          @default("published") // published, hidden, flagged, pending_review
+  moderationStatus String?    // approved, rejected, pending
+  moderationReason String?    @db.Text // Reason if rejected
+  moderatedBy String?         // Admin who last moderated the review
+  moderatedAt DateTime?       // When the review was last moderated
+  reportCount Int             @default(0) // Number of times review has been reported
+  isAutomatedlyFlagged Boolean @default(false) // Flagged by automated content filter
+  helpfulVotes MarketplaceReviewVote[]
+  responses   MarketplaceReviewResponse[]
+  reports     MarketplaceReviewReport[] // Reports related to this review
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([productId])
+  @@index([userId])
+  @@index([rating])
+  @@index([status])
+  @@index([moderationStatus])
+  @@index([reportCount])
+}
+
+model MarketplaceReviewReport {
+  id          String          @id @default(uuid())
+  reviewId    String
+  review      MarketplaceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reporterId  String
+  reporter    User            @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reason      String          // spam, offensive, irrelevant, misleading, other
+  description String?         @db.Text
+  status      String          @default("pending") // pending, resolved, dismissed
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([reviewId])
+  @@index([reporterId])
+  @@index([status])
+}
+
+model MarketplaceReviewVote {
+  id        String           @id @default(uuid())
+  reviewId  String
+  review    MarketplaceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isHelpful Boolean
+  createdAt DateTime         @default(now())
+
+  @@unique([reviewId, userId])
+  @@index([userId])
+}
+
+model MarketplaceReviewResponse {
+  id        String           @id @default(uuid())
+  reviewId  String
+  review    MarketplaceReview @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String           @db.Text
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([reviewId])
+  @@index([userId])
+}
+
+// Wishlist Models
+model Wishlist {
+  id          String         @id @default(uuid())
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isDefault   Boolean        @default(false)
+  isPublic    Boolean        @default(false)
+  items       WishlistItem[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model WishlistItem {
+  id         String             @id @default(uuid())
+  wishlistId String
+  wishlist   Wishlist           @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  productId  String
+  product    MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes      String?
+  addedAt    DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@unique([wishlistId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+// Product Recommendation Models
+model UserProductView {
+  id        String             @id @default(uuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  viewCount Int                @default(1)
+  lastViewed DateTime           @default(now())
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+model ProductRecommendation {
+  id                 String             @id @default(uuid())
+  sourceProductId    String
+  sourceProduct      MarketplaceProduct @relation("SourceProduct", fields: [sourceProductId], references: [id], onDelete: Cascade)
+  recommendedProductId String
+  recommendedProduct  MarketplaceProduct @relation("RecommendedProduct", fields: [recommendedProductId], references: [id], onDelete: Cascade)
+  score              Float               @default(0)
+  type               String              // "also_bought", "similar", "category", "seasonal"
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@unique([sourceProductId, recommendedProductId])
+  @@index([sourceProductId])
+  @@index([recommendedProductId])
+  @@index([type])
+}
+
+model SeasonalProduct {
+  id         String             @id @default(uuid())
+  productId  String
+  product    MarketplaceProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  seasonName String             // "spring", "summer", "fall", "winter", "holiday", etc.
+  startDate  DateTime?          // Optional start date for seasonal relevance
+  endDate    DateTime?          // Optional end date for seasonal relevance
+  priority   Int                @default(1) // Higher values indicate higher priority
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@unique([productId, seasonName])
+  @@index([seasonName])
+  @@index([productId])
+}
+
+model SearchAnalytics {
+  id           String    @id @default(uuid())
+  query        String    @db.Text
+  action       String    // search, click, filter, etc.
+  userId       String?
+  user         User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  productId    String?
+  product      MarketplaceProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  categoryId   String?
+  category     MarketplaceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  sellerId     String?
+  seller       User?     @relation("SellerSearchAnalytics", fields: [sellerId], references: [id], onDelete: SetNull)
+  resultsCount Int?
+  position     Int?      // Position of the clicked item in results
+  filters      String?   @db.Text // JSON string of applied filters
+  ip           String?
+  userAgent    String?   @db.Text
+  timestamp    DateTime  @default(now())
+
+  @@index([query])
+  @@index([userId])
+  @@index([timestamp])
+}
+
+// Content Management Models
+model ContentCategory {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?   @db.Text
+  parentId    String?
+  parent      ContentCategory? @relation("ContentCategoryHierarchy", fields: [parentId], references: [id])
+  children    ContentCategory[] @relation("ContentCategoryHierarchy")
+  articles    Article[]
+  guides      Guide[]
+  videos      Video[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([parentId])
+  @@map("content_categories")
+}
+
+model Article {
+  id            String    @id @default(uuid())
+  title         String
+  slug          String    @unique
+  summary       String?   @db.Text
+  content       String    @db.Text
+  featuredImage String?
+  categoryId    String?
+  category      ContentCategory? @relation(fields: [categoryId], references: [id])
+  authorId      String?
+  author        User?     @relation(fields: [authorId], references: [id])
+  tags          String[]
+  status        String    @default("draft") // draft, published, archived
+  publishedAt   DateTime?
+  readTime      Int?      // Estimated read time in minutes
+  metadata      Json?     // For SEO and additional attributes
+  viewCount     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([status])
+  @@index([publishedAt])
+  @@map("articles")
+}
+
+model Guide {
+  id            String    @id @default(uuid())
+  title         String
+  slug          String    @unique
+  summary       String?   @db.Text
+  content       String    @db.Text
+  featuredImage String?
+  categoryId    String?
+  category      ContentCategory? @relation(fields: [categoryId], references: [id])
+  authorId      String?
+  author        User?     @relation(fields: [authorId], references: [id])
+  steps         Json[]    // Array of guide steps
+  tags          String[]
+  status        String    @default("draft") // draft, published, archived
+  publishedAt   DateTime?
+  difficulty    String?   // beginner, intermediate, advanced
+  metadata      Json?     // For SEO and additional attributes
+  viewCount     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([status])
+  @@index([publishedAt])
+  @@map("guides")
+}
+
+model Video {
+  id            String    @id @default(uuid())
+  title         String
+  slug          String    @unique
+  description   String?   @db.Text
+  videoUrl      String
+  thumbnailUrl  String?
+  duration      Int?      // Duration in seconds
+  categoryId    String?
+  category      ContentCategory? @relation(fields: [categoryId], references: [id])
+  authorId      String?
+  author        User?     @relation(fields: [authorId], references: [id])
+  tags          String[]
+  status        String    @default("draft") // draft, published, archived
+  publishedAt   DateTime?
+  transcript    String?   @db.Text
+  metadata      Json?     // For SEO and additional attributes
+  viewCount     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([status])
+  @@index([publishedAt])
+  @@map("videos")
+}
+
+model GlossaryTerm {
+  id          String    @id @default(uuid())
+  term        String    @unique
+  slug        String    @unique
+  definition  String    @db.Text
+  authorId    String?
+  author      User?     @relation(fields: [authorId], references: [id])
+  tags        String[]
+  status      String    @default("draft") // draft, published, archived
+  publishedAt DateTime?
+  viewCount   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([authorId])
+  @@index([status])
+  @@index([publishedAt])
+  @@map("glossary_terms")
+}
+
+// Vercel SDK Content Versioning
+model ContentVersion {
+  id          String    @id @default(uuid())
+  contentType String    // article, guide, video, glossary
+  contentId   String    // ID of the content item
+  version     Int
+  data        Json      // Full content snapshot
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  publishedAt DateTime?
+  
+  @@unique([contentType, contentId, version])
+  @@index([contentType, contentId])
+  @@map("content_versions")
+}
+
+model ModelSchema {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String? @db.Text
+  schema      Json    // JSON Schema definition
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("model_schemas")
+}
+
+model Setting {
+  key         String    @id
+  value       String    @db.Text
+  description String?   @db.Text
+  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime  @default(now())
+}
+
+model Resource {
+  id                String         @id @default(cuid())
+  title             String
+  description       String?        @db.Text
+  type              ResourceType
+  status            ResourceStatus @default(DRAFT)
+  featured          Boolean        @default(false)
+  authorId          String
+  isIndexed         Boolean        @default(false)
+  lastIndexedAt     DateTime?
+  flaggedForReview  Boolean        @default(false)
+  flagReason        String?        @db.Text
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  // Relations
+  author            User           @relation(fields: [authorId], references: [id])
+  moderationLogs    ResourceModerationLog[]
+  contentQualityAssessments ContentQualityAssessment[]
+
+  @@index([type])
+  @@index([status])
+  @@index([authorId])
+  @@index([featured])
+  @@index([flaggedForReview])
+}
+
+model ResourceModerationLog {
+  id             String        @id @default(cuid())
+  resourceId     String
+  action         String        // 'approve', 'reject', 'archive', 'feature', 'unfeature'
+  previousStatus ResourceStatus?
+  moderatorId    String
+  reason         String?       // Optional reason
+  batchId        String?       // For tracking bulk operations
+  qualityAssessmentId String?  // Reference to content quality assessment if applicable
+  createdAt      DateTime      @default(now())
+  
+  // Relations
+  resource       Resource      @relation(fields: [resourceId], references: [id])
+  moderator      User          @relation(fields: [moderatorId], references: [id])
+  contentQualityAssessment ContentQualityAssessment? @relation(fields: [qualityAssessmentId], references: [id])
+
+  @@index([resourceId])
+  @@index([moderatorId])
+  @@index([batchId])
+  @@index([createdAt])
+  @@index([qualityAssessmentId])
+}
+
+model ContentQualityAssessment {
+  id                 String    @id @default(cuid())
+  resourceId         String
+  qualityScore       Int       // 0-100 score
+  flags              Json      // Array of flags with type, confidence, and details
+  suggestions        Json      // Array of improvement suggestions
+  details            Json      // Detailed scores for different aspects
+  createdAt          DateTime  @default(now())
+  automaticallyFlagged Boolean @default(false)
+  
+  // Moderator feedback fields
+  moderatorId        String?
+  moderatorNotes     String?   @db.Text
+  moderatorActionTaken String? // 'approved', 'rejected', 'improvements_requested'
+  moderatorReviewedAt DateTime?
+  overrideQualityScore Int?    // Moderator can override the AI score
+  
+  // Relations
+  resource           Resource  @relation(fields: [resourceId], references: [id])
+  moderator          User?     @relation(fields: [moderatorId], references: [id])
+  moderationLogs     ResourceModerationLog[]
+  
+  @@index([resourceId])
+  @@index([moderatorId])
+  @@index([automaticallyFlagged])
+  @@index([createdAt])
+  @@index([qualityScore])
+}
+
+// NextAuth.js models
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model ReputationActivity {
+  id        String   @id @default(uuid())
+  userId    String
+  type      ReputationActivityType
+  points    Int
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model UserBadge {
+  id        String   @id @default(uuid())
+  userId    String
+  badgeId   String
+  badge     Badge    @relation(fields: [badgeId], references: [id])
+  earnedAt  DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([badgeId])
+  @@index([earnedAt])
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  category    BadgeCategory
+  points      Int
+  icon        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([points])
+}
+
+model UserEndorsement {
+  id        String   @id @default(uuid())
+  giverId   String
+  giver     User     @relation(fields: [giverId], references: [id], onDelete: Cascade)
+  receiverId String
+  receiver  User     @relation(fields: [receiverId], references: [id], onDelete: Cascade)
+  skill     String
+  createdAt DateTime @default(now())
+
+  @@index([giverId])
+  @@index([receiverId])
+  @@index([skill])
+  @@index([createdAt])
+}
+
+model UserCredential {
+  id        String   @id @default(uuid())
+  userId    String
+  credential String
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([credential])
+  @@index([verified])
+  @@index([createdAt])
+}
+
+// Event Calendar Models
+model Event {
+  id              String           @id @default(uuid())
+  title           String
+  description     String?
+  location        String?
+  startDate       DateTime
+  endDate         DateTime
+  isAllDay        Boolean          @default(false)
+  recurrence      String?          // JSON string for recurrence rules (RRULE format)
+  backgroundColor String?
+  borderColor     String?
+  url             String?
+  creatorId       String
+  creator         User             @relation(fields: [creatorId], references: [id])
+  attendees       EventAttendee[]
+  categories      EventCategory[]
+  reminders       EventReminder[]
+  groupId         String?
+  group           Group?           @relation(fields: [groupId], references: [id])
+  isPublic        Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([creatorId])
+  @@index([startDate, endDate])
+  @@index([groupId])
+  @@map("events")
+}
+
+model EventCategory {
+  id        String   @id @default(uuid())
+  name      String
+  color     String   @default("#4299e1")
+  events    Event[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("event_categories")
+}
+
+model EventAttendee {
+  id        String        @id @default(uuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id])
+  eventId   String
+  event     Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status    AttendeeStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([eventId])
+  @@map("event_attendees")
+}
+
+model EventReminder {
+  id        String   @id @default(uuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  time      DateTime
+  sent      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([userId])
+  @@index([time, sent])
+  @@map("event_reminders")
+}
+
+// Enum for attendee status
+enum AttendeeStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  MAYBE
+}
+
+// Content Moderation Models
+model ModerationQueue {
+  id                String               @id @default(uuid())
+  contentId         String
+  contentType       ContentType
+  status            ModerationStatus     @default(PENDING)
+  priority          ModerationPriority   @default(NORMAL)
+  reason            String?
+  autoFlagged       Boolean              @default(false)
+  aiConfidenceScore Float?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  reporterId        String?
+  reporter          User?                @relation("reporter", fields: [reporterId], references: [id])
+  moderatorId       String?
+  moderator         User?                @relation("moderator", fields: [moderatorId], references: [id])
+  assignedAt        DateTime?
+  resolvedAt        DateTime?
+  notes             String?
+  actionTaken       ModerationAction?
+  history           ModerationHistory[]
+  
+  @@index([contentId, contentType])
+  @@index([status])
+  @@index([priority])
+  @@index([reporterId])
+  @@index([moderatorId])
+  @@map("moderation_queue")
+}
+
+model ModerationHistory {
+  id                String             @id @default(uuid())
+  queueItemId       String
+  queueItem         ModerationQueue    @relation(fields: [queueItemId], references: [id], onDelete: Cascade)
+  status            ModerationStatus
+  actionTaken       ModerationAction?
+  moderatorId       String?
+  moderator         User?              @relation(fields: [moderatorId], references: [id])
+  notes             String?
+  createdAt         DateTime           @default(now())
+  
+  @@index([queueItemId])
+  @@index([moderatorId])
+  @@map("moderation_history")
+}
+
+model ModerationRule {
+  id                String             @id @default(uuid())
+  name              String             @unique
+  description       String?
+  contentType       ContentType
+  enabled           Boolean            @default(true)
+  priority          ModerationPriority @default(NORMAL)
+  autoAction        ModerationAction?
+  aiEnabled         Boolean            @default(false)
+  aiThreshold       Float?             @default(0.8)
+  keywords          String?            // Comma-separated list of trigger keywords
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  @@index([contentType])
+  @@map("moderation_rules")
+}
+
+enum ContentType {
+  POST
+  COMMENT
+  PRODUCT
+  RESOURCE
+  PROFILE
+  GROUP
+  MESSAGE
+  EVENT
+}
+
+enum ModerationStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  NEEDS_REVIEW
+  AUTO_APPROVED
+  AUTO_REJECTED
+}
+
+enum ModerationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ModerationAction {
+  APPROVED
+  REJECTED
+  WARNING_ISSUED
+  CONTENT_EDITED
+  USER_SUSPENDED
+  USER_BANNED
+  RESTRICTED_VISIBILITY
+  NO_ACTION
+}
+
+model ModerationToken {
+  id                String             @id @default(uuid())
+  token             String             @unique
+  contentType       ContentType
+  contentId         String
+  expiresAt         DateTime
+  revoked           Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Metadata for the token
+  createdById       String?
+  createdBy         User?              @relation(fields: [createdById], references: [id])
+  issuedReason      String?
+  maxUsageCount     Int?               // Null means unlimited
+  currentUsageCount Int                @default(0)
+  
+  @@index([contentType, contentId])
+  @@index([createdById])
+  @@index([expiresAt])
+  @@map("moderation_tokens")
+}
+
+model ModeratedContent {
+  id                String             @id @default(uuid())
+  contentType       ContentType
+  contentId         String
+  originalContent   String?            @db.Text
+  modifiedContent   String?            @db.Text
+  moderationStatus  ModerationStatus   @default(PENDING)
+  moderatedAt       DateTime?
+  moderatedById     String?
+  moderatedBy       User?              @relation(fields: [moderatedById], references: [id])
+  reason            String?
+  aiScore           Float?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  @@unique([contentType, contentId])
+  @@index([contentType, contentId])
+  @@index([moderationStatus])
+  @@index([moderatedById])
+  @@map("moderated_content")
+}
+
+model CommentModerationLog {
+  id                String             @id @default(uuid())
+  commentId         String
+  reviewerId        String?
+  reviewer          User?              @relation(fields: [reviewerId], references: [id])
+  action            ModerationAction
+  previousContent   String?            @db.Text
+  updatedContent    String?            @db.Text
+  reason            String?
+  systemGenerated   Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  
+  @@index([commentId])
+  @@index([reviewerId])
+  @@index([createdAt])
+  @@map("comment_moderation_logs")
 }

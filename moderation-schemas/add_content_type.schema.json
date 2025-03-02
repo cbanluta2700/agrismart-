@@ -1,0 +1,48 @@
+{
+  "name": "add_content_type",
+  "description": "Schema for adding a content type to the moderation system",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "A unique identifier for the content type",
+      "required": true
+    },
+    "displayName": {
+      "type": "string",
+      "description": "User-friendly display name for the content type",
+      "required": true
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of what this content type represents",
+      "required": true
+    },
+    "contentFields": {
+      "type": "array",
+      "description": "List of field names that should be included when displaying this content type",
+      "required": true
+    },
+    "priority": {
+      "type": "string",
+      "description": "Default priority level for moderation of this content type",
+      "required": true,
+      "enum": [
+        "LOW",
+        "NORMAL",
+        "HIGH",
+        "URGENT"
+      ]
+    },
+    "autoModeration": {
+      "type": "string",
+      "description": "How this content type should be handled by automatic moderation",
+      "required": true,
+      "enum": [
+        "ALWAYS",
+        "WHEN_FLAGGED",
+        "NEVER"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,36 @@
+sequenceDiagram
+    participant Client as Client (Browser)
+    participant NextJS as Next.js App
+    participant APIRoute as API Route
+    participant Middleware as Middleware
+    participant Controller as Controller
+    participant Service as Service
+    participant Cache as Redis Cache
+    participant ORM as Prisma ORM
+    participant DB as Database
+    
+    Client->>NextJS: User Action (e.g., View Farm)
+    NextJS->>NextJS: Update Local State
+    NextJS->>APIRoute: API Request (GET /api/farms/123)
+    APIRoute->>Middleware: Process Request
+    Middleware->>Middleware: Authenticate User
+    Middleware->>Middleware: Rate Limit Check
+    Middleware->>Controller: Forward Request
+    Controller->>Service: getFarmById(123)
+    
+    Service->>Cache: Check Cache
+    alt Cache Hit
+        Cache-->>Service: Return Cached Data
+    else Cache Miss
+        Service->>ORM: Query Farm Data
+        ORM->>DB: SQL Query
+        DB-->>ORM: Return Data
+        ORM-->>Service: Return Farm Object
+        Service->>Cache: Store in Cache
+    end
+    
+    Service-->>Controller: Return Farm Data
+    Controller-->>APIRoute: Format Response
+    APIRoute-->>NextJS: JSON Response
+    NextJS->>NextJS: Update Recoil State
+    NextJS-->>Client: Render Updated UI

@@ -1,207 +1,132 @@
-import { v4 as uuidv4 } from 'uuid';
-import { NextRequest } from 'next/server';
-import { getClientInfo } from '@/lib/utils/request';
-import type { User, Session } from '@prisma/client';
-import { prisma } from '@/lib/prisma';
+ximport { Redis } from 'ioredis'
+import { User } from '@/types/store.types'
+import { UAParser } from 'ua-parser-js'
 
-const SESSION_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
-const MAX_ACTIVE_SESSIONS = 5;
+// Initialize Redis client
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379')
 
-interface SessionWithUser extends Session {
-  user: Pick<User, 'id' | 'email' | 'name' | 'role' | 'isVerified'>;
+export interface Session {
+  id: string
+  userId: string
+  userAgent: string
+  ip: string
+  device: string
+  browser: string
+  location: string
+  lastActive: Date
+  createdAt: Date
+  expiresAt: Date
 }
 
-/**
- * Create a new session for a user
- */
-export async function createSession(user: User, req: NextRequest): Promise<Session> {
-  const clientInfo = await getClientInfo(req);
-  const token = uuidv4();
+export class SessionManager {
+  private static readonly SESSION_PREFIX = 'session:'
+  private static readonly USER_SESSIONS_PREFIX = 'user_sessions:'
+  private static readonly SESSION_DURATION = 30 * 24 * 60 * 60 * 1000 // 30 days
 
-  // Clean up expired sessions first
-  await cleanupExpiredSessions(user.id);
+  static async createSession(
+    user: User,
+    userAgent: string,
+    ip: string
+  ): Promise<Session> {
+    const parser = new UAParser(userAgent)
+    const sessionId = crypto.randomUUID()
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + this.SESSION_DURATION)
 
-  // Count active sessions
-  const activeSessions = await prisma.session.count({
-    where: {
+    const session: Session = {
+      id: sessionId,
       userId: user.id,
-      isRevoked: false,
-      expiresAt: { gt: new Date() }
+      userAgent,
+      ip,
+      device: `${parser.getDevice().vendor || ''} ${parser.getDevice().model || 'Unknown'}`.trim(),
+      browser: `${parser.getBrowser().name || 'Unknown'} ${parser.getBrowser().version || ''}`.trim(),
+      location: 'Unknown', // Could be resolved using GeoIP service
+      lastActive: now,
+      createdAt: now,
+      expiresAt
     }
-  });
 
-  // If at max sessions, revoke oldest
-  if (activeSessions >= MAX_ACTIVE_SESSIONS) {
-    const oldestSession = await prisma.session.findFirst({
-      where: {
-        userId: user.id,
-        isRevoked: false,
-        expiresAt: { gt: new Date() }
-      },
-      orderBy: { lastActive: 'asc' }
-    });
+    // Store session in Redis
+    await redis.setex(
+      `${this.SESSION_PREFIX}${sessionId}`,
+      this.SESSION_DURATION / 1000,
+      JSON.stringify(session)
+    )
 
-    if (oldestSession) {
-      await revokeSession(oldestSession.id);
+    // Add to user's session list
+    await redis.sadd(
+      `${this.USER_SESSIONS_PREFIX}${user.id}`,
+      sessionId
+    )
+
+    return session
+  }
+
+  static async getSession(sessionId: string): Promise<Session | null> {
+    const sessionData = await redis.get(`${this.SESSION_PREFIX}${sessionId}`)
+    if (!sessionData) return null
+
+    const session = JSON.parse(sessionData)
+    return {
+      ...session,
+      lastActive: new Date(session.lastActive),
+      createdAt: new Date(session.createdAt),
+      expiresAt: new Date(session.expiresAt)
     }
   }
 
-  // Create new session
-  const session = await prisma.session.create({
-    data: {
-      userId: user.id,
-      token,
-      device: clientInfo.device,
-      browser: clientInfo.browser || 'Unknown',
-      ipAddress: clientInfo.ipAddress,
-      location: clientInfo.location || undefined,
-      expiresAt: new Date(Date.now() + SESSION_EXPIRY),
-      metadata: {
-        os: clientInfo.os,
-        userAgent: clientInfo.userAgent
-      }
-    }
-  });
+  static async updateSessionActivity(sessionId: string): Promise<void> {
+    const session = await this.getSession(sessionId)
+    if (!session) return
 
-  // Update user's last activity
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      lastActiveAt: new Date(),
-      lastDeviceInfo: clientInfo
-    }
-  });
-
-  return session;
-}
-
-/**
- * Validate and refresh a session
- */
-export async function validateSession(token: string, req: NextRequest): Promise<SessionWithUser | null> {
-  const session = await prisma.session.findUnique({
-    where: { token },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          isVerified: true
-        }
-      }
-    }
-  });
-
-  if (!session || session.isRevoked || session.expiresAt <= new Date()) {
-    return null;
+    session.lastActive = new Date()
+    await redis.setex(
+      `${this.SESSION_PREFIX}${sessionId}`,
+      this.SESSION_DURATION / 1000,
+      JSON.stringify(session)
+    )
   }
 
-  // Optional: Verify client info matches (for security)
-  const clientInfo = await getClientInfo(req);
-  if (session.ipAddress !== clientInfo.ipAddress) {
-    // Log potential security concern but don't invalidate
-    // Could be legitimate IP change (mobile, VPN)
-    console.warn('Session IP mismatch:', {
-      sessionId: session.id,
-      expectedIp: session.ipAddress,
-      actualIp: clientInfo.ipAddress
-    });
+  static async getUserSessions(userId: string): Promise<Session[]> {
+    const sessionIds = await redis.smembers(`${this.USER_SESSIONS_PREFIX}${userId}`)
+    const sessions = await Promise.all(
+      sessionIds.map(id => this.getSession(id))
+    )
+    return sessions.filter((session): session is Session => session !== null)
   }
 
-  // Update last active timestamp
-  const updatedSession = await prisma.session.update({
-    where: { id: session.id },
-    data: { lastActive: new Date() },
-    include: {
-      user: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          role: true,
-          isVerified: true
-        }
+  static async revokeSession(sessionId: string): Promise<void> {
+    const session = await this.getSession(sessionId)
+    if (!session) return
+
+    await Promise.all([
+      redis.del(`${this.SESSION_PREFIX}${sessionId}`),
+      redis.srem(`${this.USER_SESSIONS_PREFIX}${session.userId}`, sessionId)
+    ])
+  }
+
+  static async revokeAllUserSessions(userId: string, exceptSessionId?: string): Promise<void> {
+    const sessions = await this.getUserSessions(userId)
+    await Promise.all(
+      sessions
+        .filter(session => session.id !== exceptSessionId)
+        .map(session => this.revokeSession(session.id))
+    )
+  }
+
+  static async cleanupExpiredSessions(): Promise<void> {
+    // This could be run periodically as a cron job
+    const allSessionKeys = await redis.keys(`${this.SESSION_PREFIX}*`)
+    const now = new Date()
+
+    for (const key of allSessionKeys) {
+      const sessionData = await redis.get(key)
+      if (!sessionData) continue
+
+      const session = JSON.parse(sessionData)
+      if (new Date(session.expiresAt) < now) {
+        await this.revokeSession(session.id)
       }
     }
-  });
-
-  return updatedSession;
-}
-
-/**
- * Revoke a specific session
- */
-export async function revokeSession(sessionId: string): Promise<void> {
-  await prisma.session.update({
-    where: { id: sessionId },
-    data: {
-      isRevoked: true,
-      revokedAt: new Date()
-    }
-  });
-}
-
-/**
- * Revoke all sessions for a user
- */
-export async function revokeAllSessions(userId: string, exceptSessionId?: string): Promise<void> {
-  await prisma.session.updateMany({
-    where: {
-      userId,
-      id: { not: exceptSessionId },
-      isRevoked: false
-    },
-    data: {
-      isRevoked: true,
-      revokedAt: new Date()
-    }
-  });
-}
-
-/**
- * Get all active sessions for a user
- */
-export async function getActiveSessions(userId: string): Promise<Session[]> {
-  return prisma.session.findMany({
-    where: {
-      userId,
-      isRevoked: false,
-      expiresAt: { gt: new Date() }
-    },
-    orderBy: { lastActive: 'desc' }
-  });
-}
-
-/**
- * Clean up expired sessions
- */
-export async function cleanupExpiredSessions(userId?: string): Promise<void> {
-  const where = {
-    isRevoked: false,
-    expiresAt: { lt: new Date() },
-    ...(userId ? { userId } : {})
-  };
-
-  await prisma.session.updateMany({
-    where,
-    data: {
-      isRevoked: true,
-      revokedAt: new Date()
-    }
-  });
-}
-
-/**
- * Get total active sessions count
- */
-export async function getActiveSessionsCount(userId: string): Promise<number> {
-  return prisma.session.count({
-    where: {
-      userId,
-      isRevoked: false,
-      expiresAt: { gt: new Date() }
-    }
-  });
+  }
 }

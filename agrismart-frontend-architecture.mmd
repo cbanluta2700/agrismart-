@@ -1,0 +1,117 @@
+graph TD
+    subgraph "Next.js Application"
+        RootLayout[RootLayout app/layout.tsx]
+        Providers[app/providers.tsx]
+        
+        subgraph "Pages"
+            Home[Homepage app/page.tsx]
+            Dashboard[Dashboard /dashboard]
+            Marketplace[Marketplace /marketplace]
+            Chat[Chat System /chat]
+            Auth[Authentication /auth]
+            Monitoring[Monitoring /monitoring]
+            Community[Community /community]
+        end
+        
+        subgraph "Components"
+            UI[UI Components]
+            Forms[Form Components]
+            Charts[Chart Components]
+            Maps[Map Components]
+            Tables[Table Components]
+            Modals[Modal Components]
+        end
+        
+        subgraph "Hooks"
+            UseAuth[use-auth.ts]
+            UseChat[use-chat.ts]
+            UseDashboard[use-dashboard-stats.ts]
+            UseNotifications[use-notifications.ts]
+            UseFarm[use-farm.ts]
+            UseCrop[use-crop.ts]
+            UseSensor[use-sensor.ts]
+        end
+        
+        subgraph "State Management"
+            RecoilStore[Recoil Store]
+            AuthState[Authentication State]
+            UserState[User State]
+            FarmState[Farm State]
+            CropState[Crop State]
+            SensorState[Sensor State]
+            NotificationState[Notification State]
+        end
+    end
+    
+    subgraph "API Client"
+        APIClient[API Client]
+        AuthAPI[Auth API]
+        FarmAPI[Farm API]
+        CropAPI[Crop API]
+        MarketplaceAPI[Marketplace API]
+        SensorAPI[Sensor API]
+        ChatAPI[Chat API]
+    end
+    
+    %% Root Layout Connections
+    RootLayout --> Providers
+    Providers --> Pages
+    
+    %% Page Connections
+    Home --> UI
+    Dashboard --> UI
+    Dashboard --> Charts
+    Dashboard --> Maps
+    Dashboard --> Tables
+    Marketplace --> UI
+    Marketplace --> Forms
+    Chat --> UI
+    Auth --> UI
+    Auth --> Forms
+    Monitoring --> UI
+    Monitoring --> Charts
+    Community --> UI
+    
+    %% Component Connections
+    UI --> Hooks
+    Forms --> Hooks
+    Charts --> Hooks
+    Maps --> Hooks
+    Tables --> Hooks
+    Modals --> Hooks
+    
+    %% Hook Connections
+    UseAuth --> RecoilStore
+    UseChat --> RecoilStore
+    UseDashboard --> RecoilStore
+    UseNotifications --> RecoilStore
+    UseFarm --> RecoilStore
+    UseCrop --> RecoilStore
+    UseSensor --> RecoilStore
+    
+    %% State Connections
+    RecoilStore --> AuthState
+    RecoilStore --> UserState
+    RecoilStore --> FarmState
+    RecoilStore --> CropState
+    RecoilStore --> SensorState
+    RecoilStore --> NotificationState
+    
+    %% API Connections
+    UseAuth --> AuthAPI
+    UseChat --> ChatAPI
+    UseDashboard --> FarmAPI
+    UseDashboard --> CropAPI
+    UseDashboard --> SensorAPI
+    UseNotifications --> AuthAPI
+    UseFarm --> FarmAPI
+    UseCrop --> CropAPI
+    UseSensor --> SensorAPI
+    
+    %% API Client Connections
+    AuthAPI --> APIClient
+    FarmAPI --> APIClient
+    CropAPI --> APIClient
+    MarketplaceAPI --> APIClient
+    SensorAPI --> APIClient
+    ChatAPI --> APIClient

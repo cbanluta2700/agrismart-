@@ -1,16 +1,19 @@
 import React from 'react';
 import { PostComment } from '../../../shared/types/post';
 import { formatDistanceToNow } from 'date-fns';
+import ReportButton from '@/components/reports/report-button';
 
 export interface CommentListProps {
   comments: PostComment[];
   currentUserId: string;
+  groupId: string;
   onDelete?: (commentId: string) => void;
 }
 
 const CommentList: React.FC<CommentListProps> = ({
   comments,
   currentUserId,
+  groupId,
   onDelete
 }) => {
   if (comments.length === 0) {
@@ -45,6 +48,12 @@ const CommentList: React.FC<CommentListProps> = ({
                       Delete
                     </button>
                   )}
+                  <ReportButton
+                    itemType="COMMENT"
+                    itemId={comment.id}
+                    groupId={groupId}
+                    size="sm"
+                  />
                 </div>
               </div>
               <p className="text-sm text-gray-800 mt-1 break-words">

@@ -1,0 +1,20 @@
+{
+  "scripts": {
+    "predev": "bun scripts/init-task.ts",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "vitest",
+    "task:new": "bun scripts/init-task.ts",
+    "task:complete": "bun scripts/init-task.ts --complete",
+    "architecture:update": "./scripts/update-architecture.sh",
+    "prepare": "husky install"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "bun run architecture:update && git add docs/",
+      "post-commit": "bun scripts/init-task.ts --complete"
+    }
+  }
+}

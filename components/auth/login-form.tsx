@@ -1,193 +1,122 @@
-'use client';
-
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '@/components/ui/form';
-import Input from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Icons } from '@/components/ui/icons';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/lib/auth/hooks';
+import type { LoginCredentials } from '@/lib/auth/types';
 
-const formSchema = z.object({
-  email: z.string()
-    .min(1, 'Email is required')
-    .email('Invalid email address'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters'),
-});
+export interface LoginFormProps {
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+}
 
-type FormData = z.infer<typeof formSchema>;
+export const LoginForm = ({ onSuccess, onError }: LoginFormProps) => {
+  const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export function LoginForm() {
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Pre-fill test account if enabled
-  const defaultValues = {
-    email: process.env.NEXT_PUBLIC_TEST_ACCOUNT_EMAIL || '',
-    password: process.env.NEXT_PUBLIC_TEST_ACCOUNT_PASSWORD || '',
-  };
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues,
-  });
+    const formData = new FormData(event.currentTarget);
+    const credentials: LoginCredentials = {
+      email: formData.get('email') as string,
+      password: formData.get('password') as string,
+    };
 
-  const onSubmit = async (data: FormData) => {
     try {
-      setIsLoading(true);
-      
-      // Check test credentials
-      if (
-        data.email === process.env.NEXT_PUBLIC_TEST_ACCOUNT_EMAIL &&
-        data.password === process.env.NEXT_PUBLIC_TEST_ACCOUNT_PASSWORD
-      ) {
-        // Use window.location.replace for a full page navigation
-        window.location.replace('/test-page');
-        return;
-      }
-      
-      alert('Please use test credentials');
-    } catch (error) {
-      console.error('Login error:', error);
+      await login(credentials);
+      onSuccess?.();
+    } catch (err) {
+      const error = err as Error;
+      setError(error.message);
+      onError?.(error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
-        {process.env.NEXT_PUBLIC_ENABLE_TEST_ACCOUNT === 'true' && (
-          <Alert className="bg-gradient-to-r from-[#244A32]/30 to-[#172F21]/30 border-[#38FF7E]/20 backdrop-blur-sm">
-            <div className="flex items-center gap-2">
-              <Icons.info className="h-4 w-4 text-[#38FF7E]" />
-              <AlertDescription className="text-[#E3FFED]/90">
-                Test account enabled. Use:
-                <br />
-                Email: <span className="text-[#38FF7E]">{defaultValues.email}</span>
-                <br />
-                Password: <span className="text-[#38FF7E]">{defaultValues.password}</span>
-              </AlertDescription>
-            </div>
-          </Alert>
+    <div className="w-full max-w-md mx-auto p-6 space-y-6">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold">Welcome Back</h1>
+        <p className="text-gray-600 mt-2">Sign in to your account</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
+            {error}
+          </div>
         )}
 
-        <div className="grid gap-4">
-          <FormField
-            control={form.control}
+        <div className="space-y-2">
+          <label htmlFor="email" className="block text-sm font-medium">
+            Email
+          </label>
+          <input
+            id="email"
             name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[#E3FFED]/70">Email</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="name@example.com"
-                    type="email"
-                    autoComplete="email"
-                    autoFocus
-                    disabled={isLoading}
-                    className="bg-gradient-to-r from-[#244A32]/20 to-[#172F21]/20 border-[#38FF7E]/10 focus:border-[#38FF7E]/30 placeholder:text-[#E3FFED]/30"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage className="text-red-400" />
-              </FormItem>
-            )}
+            type="email"
+            required
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter your email"
           />
-          <FormField
-            control={form.control}
-            name="password"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-[#E3FFED]/70">Password</FormLabel>
-                <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="••••••••"
-                    autoComplete="current-password"
-                    disabled={isLoading}
-                    className="bg-gradient-to-r from-[#244A32]/20 to-[#172F21]/20 border-[#38FF7E]/10 focus:border-[#38FF7E]/30 placeholder:text-[#E3FFED]/30"
-                    {...field}
-                  />
-                </FormControl>
-                <FormMessage className="text-red-400" />
-              </FormItem>
-            )}
-          />
-          <Button
-            type="submit"
-            className={`w-full premium-button relative overflow-hidden transition-all duration-300
-              ${isLoading ? 'cursor-not-allowed opacity-80' : 'hover:scale-[1.02]'}
-              bg-gradient-to-r from-[#244A32] via-[#172F21] to-[#244A32] border border-[#38FF7E]/20
-            `}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="relative">
-                  <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-[#38FF7E]/20 to-transparent animate-pulse" />
-                  <Icons.spinner className="h-4 w-4 animate-spin text-[#38FF7E]" />
-                </div>
-                <span>Signing in...</span>
-              </div>
-            ) : (
-              <>
-                <span className="relative z-10">Sign In</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-[#38FF7E]/0 via-[#38FF7E]/10 to-[#38FF7E]/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform translate-x-[-100%] group-hover:translate-x-[100%]" />
-              </>
-            )}
-          </Button>
-
-          {/* Additional Links */}
-          <div className="space-y-2">
-            <div className="text-center">
-              <a
-                href="/forgot-password"
-                className="text-sm text-[#38FF7E]/80 hover:text-[#38FF7E] transition-colors"
-              >
-                Forgot your password?
-              </a>
-            </div>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-[#38FF7E]/10" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#030A06] px-2 text-[#E3FFED]/50">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Button
-                variant="outline"
-                className="w-full border-[#38FF7E]/10 hover:border-[#38FF7E]/30 hover:bg-[#244A32]/20"
-                disabled={isLoading}
-              >
-                <Icons.google className="mr-2 h-4 w-4" />
-                Google
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full border-[#38FF7E]/10 hover:border-[#38FF7E]/30 hover:bg-[#244A32]/20"
-                disabled={isLoading}
-              >
-                <Icons.github className="mr-2 h-4 w-4" />
-                GitHub
-              </Button>
-            </div>
-          </div>
         </div>
+
+        <div className="space-y-2">
+          <label htmlFor="password" className="block text-sm font-medium">
+            Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter your password"
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <input
+              id="remember"
+              name="remember"
+              type="checkbox"
+              className="h-4 w-4 rounded border-gray-300 text-blue-600"
+            />
+            <label htmlFor="remember" className="ml-2 block text-sm">
+              Remember me
+            </label>
+          </div>
+
+          <a
+            href="/auth/forgot-password"
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Forgot password?
+          </a>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full py-2 px-4 rounded-lg text-white font-medium
+            ${loading
+              ? 'bg-blue-400 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+        >
+          {loading ? 'Signing in...' : 'Sign in'}
+        </button>
+
+        <p className="text-center text-sm text-gray-600">
+          Don't have an account?{' '}
+          <a href="/auth/register" className="text-blue-600 hover:underline">
+            Sign up
+          </a>
+        </p>
       </form>
-    </Form>
+    </div>
   );
-}
+};

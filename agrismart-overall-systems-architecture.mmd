@@ -1,0 +1,79 @@
+graph TB
+    subgraph "Client Layer"
+        NextJS[Next.js Application]
+        subgraph "Frontend Components"
+            Pages[Pages]
+            Components[UI Components]
+            Hooks[Custom Hooks]
+            State[Recoil State]
+        end
+    end
+
+    subgraph "API Layer"
+        APIRoutes[Next.js API Routes]
+        Middleware[Middleware]
+        APIGateway[API Gateway]
+    end
+
+    subgraph "Service Layer"
+        AuthService[Authentication Service]
+        FarmService[Farm Management Service]
+        CropService[Crop Management Service]
+        MarketplaceService[Marketplace Service]
+        SensorService[Sensor Data Service]
+        ChatService[Chat Service]
+    end
+
+    subgraph "Data Layer"
+        Prisma[Prisma ORM]
+        DB[(PostgreSQL)]
+        Redis[(Redis Cache)]
+        S3[(S3 Storage)]
+    end
+
+    subgraph "Infrastructure"
+        K8s[Kubernetes]
+        Monitoring[Prometheus/Grafana]
+        Logging[Fluentd/Elasticsearch/Kibana]
+    end
+
+    %% Client Layer Connections
+    Pages --> Components
+    Components --> Hooks
+    Hooks --> State
+    State --> APIRoutes
+
+    %% API Layer Connections
+    APIRoutes --> Middleware
+    Middleware --> APIGateway
+    APIGateway --> AuthService
+    APIGateway --> FarmService
+    APIGateway --> CropService
+    APIGateway --> MarketplaceService
+    APIGateway --> SensorService
+    APIGateway --> ChatService
+
+    %% Service Layer Connections
+    AuthService --> Prisma
+    FarmService --> Prisma
+    CropService --> Prisma
+    MarketplaceService --> Prisma
+    SensorService --> Prisma
+    ChatService --> Prisma
+    
+    AuthService --> Redis
+    MarketplaceService --> Redis
+    SensorService --> Redis
+    ChatService --> Redis
+    
+    MarketplaceService --> S3
+    SensorService --> S3
+
+    %% Data Layer Connections
+    Prisma --> DB
+
+    %% Infrastructure Connections
+    K8s --> NextJS
+    K8s --> APIGateway
+    Monitoring --> K8s
+    Logging --> K8s

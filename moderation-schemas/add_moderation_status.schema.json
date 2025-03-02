@@ -1,0 +1,55 @@
+{
+  "name": "add_moderation_status",
+  "description": "Schema for adding a moderation status to the system",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "A unique identifier for the moderation status",
+      "required": true
+    },
+    "displayName": {
+      "type": "string",
+      "description": "User-friendly display name for the status",
+      "required": true
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of what this status represents",
+      "required": true
+    },
+    "color": {
+      "type": "string",
+      "description": "Color code for UI display of this status",
+      "required": true
+    },
+    "isTerminal": {
+      "type": "string",
+      "description": "Whether this status represents an end state",
+      "required": true,
+      "enum": [
+        "true",
+        "false"
+      ]
+    },
+    "visibilityImpact": {
+      "type": "string",
+      "description": "How this status affects content visibility",
+      "required": true,
+      "enum": [
+        "VISIBLE",
+        "HIDDEN",
+        "RESTRICTED"
+      ]
+    },
+    "notifyUser": {
+      "type": "string",
+      "description": "Whether to notify the content creator when this status is applied",
+      "required": true,
+      "enum": [
+        "true",
+        "false"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

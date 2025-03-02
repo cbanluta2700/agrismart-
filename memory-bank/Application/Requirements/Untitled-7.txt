@@ -1,0 +1,138 @@
+agrismart/
+├── frontend/               # Next.js frontend application
+│   ├── app/                # Next.js app directory (pages, components, layout)
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── ...             # Other pages
+│   │   ├── (auth)/       # All the auth pages
+│   │   │      ├── login/
+│   │   │      │    ├── page.tsx
+│   │   │      └── ...
+│   │   │      └── registration/
+│   │   │           ├── page.tsx
+│   │   │           └── ...
+│   │   └── (user)/
+│   │          ├── user-homepage/
+│   │          │    ├── page.tsx
+│   │          │    └── ...
+│   ├── components/         # Reusable components (UI and logic)
+│   │   ├── ui/             # Radix UI components and other styled components
+│   │   │       ├── ...
+│   │   ├── layout/         # Layout components (Navbar, sidebar, footer)
+│   │   │       ├── navbar.tsx
+│   │   │       ├── sidebar.tsx
+│   │   │       └── ...
+│   │   ├── marketplace/         # marketplace components
+│   │   │       ├── ...
+│   │   ├── community/         # community components
+│   │   │       ├── ...
+│   │   ├── resources/         # resources components
+│   │   │       ├── ...
+│   │   └── ...             # Other components
+│   ├── lib/                # Utility functions, hooks, helpers
+│   │   ├── api/
+│   │   │   ├── ...        # Functions to make API calls to the backend.
+│   │   ├── data-fetching.ts  # React-Query configuration and queries.
+│   │   ├── utils.ts       # Helper functions
+│   │   └── ...
+│   ├── context/           # React Context providers (if needed)
+│   │       ├── auth-context.tsx   # auth context
+│   │       └── ...       # Other context
+│   ├── styles/             # Global styles, Tailwind CSS configuration
+│   │   ├── globals.css     # Tailwind globals
+│   │   └── ...
+│   ├── public/             # Static assets
+│   │   └── ...
+│   ├── hooks/              # Custom React hooks
+│   │   ├── ...
+│   ├── types/              # TypeScript type definitions
+│   │   ├── user.ts        # Type for the users
+│   │   ├── products.ts        # Type for the products
+│   │   └── ...           # Other types
+│   ├── tests/              # tests files
+│   │   ├── ...
+│   ├── .env.local        # local env file
+│   ├── next.config.js     # Next.js configuration
+│   ├── tsconfig.json      # TypeScript configuration
+│   ├── tailwind.config.js # Tailwind configuration
+│   └── package.json       # Frontend dependencies and scripts
+├── server/                 # Main backend (Node.js/Express.js)
+│   ├── src/
+│   │   ├── index.ts        # Entry point of the server
+│   │   ├── server.ts       # Server configuration
+│   │   ├── app.ts          # Main app.
+│   │   ├── middleware/     # Middleware functions (authentication, logging, error handling)
+│   │   │   ├── auth.ts # Middleware for authentication
+│   │   │   ├── ... # Other Middleware
+│   │   ├── routes/         # API routes
+│   │   │   ├── auth/
+│   │   │   │   ├── auth.routes.ts        # Routes for the user
+│   │   │   │   └── ...
+│   │   │   ├── users/
+│   │   │   │   ├── users.routes.ts        # Routes for the user
+│   │   │   │   └── ...
+│   │   │   ├── marketplace/
+│   │   │   │   ├── marketplace.routes.ts        # Routes for the marketplace
+│   │   │   │   └── ...
+│   │   │   ├── community/
+│   │   │   │   ├── community.routes.ts        # Routes for the community
+│   │   │   │   └── ...
+│   │   │   ├── reporting/
+│   │   │   │   ├── reporting.routes.ts        # Routes for the reporting
+│   │   │   │   └── ...
+│   │   │   ├── resources/
+│   │   │   │   ├── resources.routes.ts        # Routes for the resources
+│   │   │   │   └── ...
+│   │   │   └── ...           # Other routes
+│   │   ├── controllers/    # Logic associated with each route.
+│   │   │    ├── auth/
+│   │   │    │   ├── auth.controller.ts
+│   │   │    │   └── ...
+│   │   │    ├── users/
+│   │   │    │   ├── users.controller.ts
+│   │   │    │   └── ...
+│   │   │    ├── ...
+│   │   ├── models/         # Database models (Prisma)
+│   │   │   ├── ...
+│   │   ├── utils/          # Utility functions, helpers
+│   │   │   ├── ...
+│   │   ├── config/          # Configuration files (database, environment)
+│   │   │   ├── index.ts      # entry point for config
+│   │   │   ├── database.ts  # Database config
+│   │   │   └── ...
+│   │   ├── services/    # Services functions.
+│   │   │    ├── auth/
+│   │   │    │   ├── auth.service.ts # Service for the auth
+│   │   │    │   └── ...
+│   │   │    ├── ...
+│   │   └── tests/         # tests files.
+│   │       └── ...
+│   ├── prisma/             # Prisma schema and migrations
+│   │   ├── schema.prisma   # Prisma schema
+│   │   └── migrations/     # Database migrations
+│   ├── .env              # Main backend environment variables
+│   └── package.json       # Backend dependencies and scripts
+├── server-api/             # Express API server
+│   ├── src/
+│   │   ├── index.ts        # Entry point of the server
+│   │   ├── app.ts          # Main app.
+│   │   ├── middleware/     # Middleware functions (authentication, logging, error handling)
+│   │   │   ├── ...         # Other middleware
+│   │   ├── routes/         # API routes
+│   │   │   ├── ...           # API server routes
+│   │   │   ├── ...
+│   │   └── tests/          # Tests files
+│   │       └── ...
+│   ├── prisma/              # Prisma schema and migrations
+│   │   ├── schema.prisma    # Prisma schema
+│   │   └── migrations/
+│   ├── .env                # API Server environment variables
+│   └── package.json         # API Server dependencies and scripts
+└── test-utils/ # Test utilities package
+    ├── src/
+    │   ├── index.ts
+    │   └── ...
+    ├── bin/ # bin for the CLI
+    │   └── index.js
+    ├── package.json
+    └── ...

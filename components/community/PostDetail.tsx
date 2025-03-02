@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { usePost } from '../../hooks/usePost';
 import { Post, Comment, ReactionType, CreateCommentData } from '../../shared/types/post';
+import ReportButton from '@/components/reports/report-button';
+import useAnalytics from '@/hooks/useAnalytics';
 
 interface PostDetailProps {
   postId: string;
+  groupId: string;
   onBack?: () => void;
 }
 
-export function PostDetail({ postId, onBack }: PostDetailProps) {
+export function PostDetail({ postId, groupId, onBack }: PostDetailProps) {
   const {
     posts,
     createComment,
@@ -17,12 +20,20 @@ export function PostDetail({ postId, onBack }: PostDetailProps) {
     getPostReactions,
     getCommentReactions
   } = usePost(postId);
+  const analytics = useAnalytics();
 
   const [newComment, setNewComment] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
 
   const post = posts.find(p => p.id === postId);
   const comments = getPostComments(postId);
+
+  // Track post view when component mounts
+  useEffect(() => {
+    if (postId) {
+      analytics.trackPostView(postId, groupId);
+    }
+  }, [postId, groupId, analytics]);
 
   const handleCreateComment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +45,13 @@ export function PostDetail({ postId, onBack }: PostDetailProps) {
       parentId: replyTo || undefined
     };
 
-    createComment(commentData);
+    const commentId = createComment(commentData);
+    
+    // Track comment creation
+    if (commentId) {
+      analytics.trackCommentCreate(commentId, postId, groupId);
+    }
+    
     setNewComment('');
     setReplyTo(null);
   };
@@ -44,6 +61,8 @@ export function PostDetail({ postId, onBack }: PostDetailProps) {
       addReaction({ commentId: targetId, type });
     } else {
       addReaction({ postId: targetId, type });
+      // Track post like
+      analytics.trackPostLike(targetId, groupId);
     }
   };
 
@@ -78,7 +97,14 @@ export function PostDetail({ postId, onBack }: PostDetailProps) {
 
       {/* Post content */}
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <h1 className="text-2xl font-bold">{post.title}</h1>
+        <div className="flex justify-between items-start">
+          <h1 className="text-2xl font-bold">{post.title}</h1>
+          <ReportButton 
+            itemType="POST" 
+            itemId={post.id} 
+            groupId={groupId} 
+          />
+        </div>
         <p className="text-gray-600">{post.content}</p>
 
         {/* Post images */}
@@ -145,7 +171,15 @@ export function PostDetail({ postId, onBack }: PostDetailProps) {
       <div className="space-y-4">
         {comments.map((comment: Comment) => (
           <div key={comment.id} className="bg-white rounded-lg shadow p-4 space-y-2">
-            <p className="text-gray-800">{comment.content}</p>
+            <div className="flex justify-between">
+              <p className="text-gray-800">{comment.content}</p>
+              <ReportButton 
+                itemType="COMMENT" 
+                itemId={comment.id} 
+                groupId={groupId} 
+                size="sm"
+              />
+            </div>
             
             {/* Comment reactions */}
             <div className="flex items-center space-x-4 text-sm">

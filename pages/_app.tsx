@@ -2,7 +2,7 @@ import { type Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { headers } from 'next/headers';
 import { Header } from '@/components/layout/header';
-import { Providers } from '@/app/providers';
+import AppProviders from '@/components/providers/AppProviders';
 import { cn } from '@/lib/utils';
 import './globals.css';
 
@@ -63,7 +63,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
         'min-h-screen bg-background font-sans antialiased',
         inter.className
       )}>
-        <Providers>
+        <AppProviders>
           <div className="relative flex min-h-screen flex-col">
             <Header />
             <main className="flex-1">
@@ -99,7 +99,7 @@ export default async function RootLayout({ children }: RootLayoutProps) {
               </footer>
             )}
           </div>
-        </Providers>
+        </AppProviders>
       </body>
     </html>
   );

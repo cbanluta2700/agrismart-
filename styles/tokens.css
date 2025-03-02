@@ -1,0 +1,126 @@
+/* 
+ * AgriSmart Design System Tokens
+ * Contains all design tokens and CSS variables used throughout the application
+ */
+
+:root {
+  /* Base colors */
+  --primary: 139 100% 33%;
+  --primary-dark: 132 50% 18%;
+  --primary-light: 149 100% 93%;
+  --accent: 142 100% 61%;
+  --muted: 210 7% 56%;
+  
+  /* Radix UI shadcn theme colors */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 142 100% 61%;
+  
+  /* Typography */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
+    'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 
+    'Liberation Mono', 'Courier New', monospace;
+  
+  /* Spacing */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  --spacing-20: 5rem;
+  --spacing-24: 6rem;
+  
+  /* Border radius */
+  --radius: 0.5rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-full: 9999px;
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.1);
+  
+  /* Z-index layers */
+  --z-negative: -1;
+  --z-elevate: 1;
+  --z-drawer: 40;
+  --z-dialog: 50;
+  --z-dropdown: 50;
+  --z-sticky: 80;
+  --z-tooltip: 90;
+  --z-toast: 95;
+  --z-modal: 100;
+  
+  /* Transitions */
+  --transition-fast: 150ms;
+  --transition-normal: 250ms;
+  --transition-slow: 350ms;
+  --transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-in: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --transition-out: cubic-bezier(0.4, 0.0, 1, 1);
+  
+  /* Focus ring */
+  --focus-ring: 0 0 0 2px rgba(56, 255, 126, 0.5);
+  
+  /* Status colors */
+  --status-success: 142 70% 45%;
+  --status-warning: 38 92% 50%;
+  --status-error: 0 84% 60%;
+  --status-info: 217 92% 51%;
+  
+  /* Content Status colors */
+  --status-approved: 142 76% 36%;
+  --status-pending: 38 92% 50%;
+  --status-rejected: 0 84% 60%;
+  --status-draft: 215 16% 47%;
+}
+
+/* Dark mode specific tokens */
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 142 100% 61%;
+  --accent-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 142 100% 61%;
+  
+  /* Shadows for dark mode */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 15px rgba(0, 0, 0, 0.5), 0 4px 6px rgba(0, 0, 0, 0.4);
+  
+  /* Focus ring for dark mode */
+  --focus-ring: 0 0 0 2px rgba(56, 255, 126, 0.8);
+}

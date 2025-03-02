@@ -1,156 +1,108 @@
-import { API_BASE, HTTP_STATUS, type ApiRequest } from "./constants";
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 
-// Custom error class for API errors
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public message: string,
-    public details?: Record<string, any>
-  ) {
-    super(message);
-    this.name = "ApiError";
-  }
+// API Configuration
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api'
+const API_TIMEOUT = 15000
+
+// Request configuration
+const config: AxiosRequestConfig = {
+  baseURL: API_URL,
+  timeout: API_TIMEOUT,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 }
 
-// Fetch options type
-interface FetchOptions extends RequestInit {
-  params?: Record<string, string | number | boolean | undefined>;
-}
+// Create Axios instance
+const apiClient: AxiosInstance = axios.create(config)
 
-// API client class
-class ApiClient {
-  private baseUrl: string;
-
-  constructor(baseUrl: string = API_BASE) {
-    this.baseUrl = baseUrl;
-  }
-
-  // Build URL with query parameters
-  private buildUrl(path: string, params?: Record<string, string | number | boolean | undefined>): string {
-    const url = new URL(path, this.baseUrl);
-    
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          url.searchParams.append(key, String(value));
-        }
-      });
-    }
-
-    return url.toString();
-  }
-
-  // Generic request method
-  private async request<T>(path: string, options: FetchOptions = {}): Promise<T> {
-    const { params, ...fetchOptions } = options;
-    const url = this.buildUrl(path, params);
-
-    try {
-      const response = await fetch(url, {
-        ...fetchOptions,
-        headers: {
-          "Content-Type": "application/json",
-          ...fetchOptions.headers,
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new ApiError(
-          response.status,
-          data.error || "An unknown error occurred",
-          data.details
-        );
+// Request interceptor
+apiClient.interceptors.request.use(
+  (config) => {
+    // Get token from localStorage in client-side
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('auth_token')
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`
       }
-
-      return data as T;
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
-      
-      throw new ApiError(
-        HTTP_STATUS.INTERNAL_SERVER_ERROR,
-        error instanceof Error ? error.message : "An unknown error occurred"
-      );
     }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
   }
+)
 
-  // HTTP method wrappers
-  async get<T>(path: string, options?: FetchOptions): Promise<T> {
-    return this.request<T>(path, { ...options, method: "GET" });
-  }
+// Response interceptor
+apiClient.interceptors.response.use(
+  (response: AxiosResponse) => {
+    return response
+  },
+  async (error: AxiosError) => {
+    const originalRequest = error.config
 
-  async post<T>(path: string, data?: unknown, options?: FetchOptions): Promise<T> {
-    return this.request<T>(path, {
-      ...options,
-      method: "POST",
-      body: data ? JSON.stringify(data) : undefined,
-    });
-  }
-
-  async put<T>(path: string, data?: unknown, options?: FetchOptions): Promise<T> {
-    return this.request<T>(path, {
-      ...options,
-      method: "PUT",
-      body: data ? JSON.stringify(data) : undefined,
-    });
-  }
-
-  async patch<T>(path: string, data?: unknown, options?: FetchOptions): Promise<T> {
-    return this.request<T>(path, {
-      ...options,
-      method: "PATCH",
-      body: data ? JSON.stringify(data) : undefined,
-    });
-  }
-
-  async delete<T>(path: string, options?: FetchOptions): Promise<T> {
-    return this.request<T>(path, { ...options, method: "DELETE" });
-  }
-
-  // File upload method
-  async upload<T>(
-    path: string,
-    files: File | File[],
-    data?: Record<string, any>,
-    options?: FetchOptions
-  ): Promise<T> {
-    const formData = new FormData();
-
-    // Append files
-    if (Array.isArray(files)) {
-      files.forEach((file, index) => {
-        formData.append(`files[${index}]`, file);
-      });
-    } else {
-      formData.append("file", files);
-    }
-
-    // Append additional data
-    if (data) {
-      Object.entries(data).forEach(([key, value]) => {
-        if (value !== undefined) {
-          formData.append(key, String(value));
+    // Handle token refresh
+    if (error.response?.status === 401 && originalRequest) {
+      try {
+        const refreshToken = localStorage.getItem('refresh_token')
+        if (refreshToken) {
+          const { data } = await axios.post(`${API_URL}/auth/refresh`, {
+            refreshToken,
+          })
+          
+          localStorage.setItem('auth_token', data.accessToken)
+          
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
+          }
+          
+          return apiClient(originalRequest)
         }
-      });
+      } catch (refreshError) {
+        // Handle refresh token failure
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('refresh_token')
+        window.location.href = '/auth/login'
+      }
     }
 
-    return this.request<T>(path, {
-      ...options,
-      method: "POST",
-      body: formData,
-      headers: {
-        ...options?.headers,
-        // Don't set Content-Type, browser will set it with boundary
-      },
-    });
+    return Promise.reject(error)
+  }
+)
+
+// API response types
+export interface ApiResponse<T = any> {
+  data: T
+  message?: string
+  status: number
+}
+
+// API error type
+export interface ApiError {
+  message: string
+  status: number
+  errors?: Record<string, string[]>
+}
+
+// Generic request method
+export async function apiRequest<T>(config: AxiosRequestConfig): Promise<ApiResponse<T>> {
+  try {
+    const response = await apiClient(config)
+    return {
+      data: response.data,
+      message: response.data.message,
+      status: response.status,
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      throw {
+        message: error.response?.data?.message || 'An error occurred',
+        status: error.response?.status || 500,
+        errors: error.response?.data?.errors,
+      } as ApiError
+    }
+    throw error
   }
 }
 
-// Export singleton instance
-export const api = new ApiClient();
-
-// Export types
-export type { FetchOptions };
+export default apiClient

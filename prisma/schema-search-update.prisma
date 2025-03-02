@@ -1,0 +1,80 @@
+// Search-related schema additions
+
+// SearchAnalytics model to track user search behavior
+model SearchAnalytics {
+  id          String    @id @default(uuid())
+  query       String    @db.Text
+  action      String    // search, product_click, filter_change, etc.
+  userId      String?   // Optional - may be anonymous
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  productId   String?
+  product     MarketplaceProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  sellerId    String?
+  seller      User?     @relation("SellerSearchAnalytics", fields: [sellerId], references: [id], onDelete: SetNull)
+  resultsCount Int?
+  position    Int?      // Position in search results when clicked
+  filters     String?   @db.Text // JSON string of applied filters
+  ip          String?   // For anonymous users
+  userAgent   String?   @db.Text
+  timestamp   DateTime  @default(now())
+
+  @@index([query(length: 100)])
+  @@index([userId])
+  @@index([productId])
+  @@index([timestamp])
+  @@index([action])
+}
+
+// SearchSynonym model to store word equivalents
+model SearchSynonym {
+  id        String   @id @default(uuid())
+  original  String   @unique
+  synonyms  String   @db.Text  // Comma-separated list of synonyms
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([original])
+}
+
+// SearchStopword model to store words to be filtered out
+model SearchStopword {
+  id        String   @id @default(uuid())
+  word      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([word])
+}
+
+// SearchRelevance model to store search result ranking settings
+model SearchRelevance {
+  id               String   @id @default(uuid())
+  titleWeight      Float    @default(1.5)
+  descriptionWeight Float   @default(1.0)
+  categoryWeight   Float    @default(1.2)
+  attributesWeight Float    @default(1.0)
+  sellerWeight     Float    @default(0.8)
+  priceWeight      Float    @default(0.6)
+  ratingWeight     Float    @default(0.7)
+  enableSynonyms   Boolean  @default(true)
+  enableTypoTolerance Boolean @default(true)
+  enableStopwords  Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
+  updatedBy        String?
+  user             User?    @relation(fields: [updatedBy], references: [id], onDelete: SetNull)
+}
+
+// Add these relation fields to the User model:
+// SearchAnalytics      SearchAnalytics[]
+// SellerSearchAnalytics SearchAnalytics[] @relation("SellerSearchAnalytics")
+// SearchRelevance      SearchRelevance[]
+
+// Add this relation field to the MarketplaceProduct model:
+// SearchAnalytics      SearchAnalytics[]
+
+// Add this relation field to the Category model:
+// SearchAnalytics      SearchAnalytics[]

@@ -1,0 +1,67 @@
+{
+  "name": "add_moderation_action",
+  "description": "Schema for adding a moderation action to the system",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "A unique identifier for the moderation action",
+      "required": true
+    },
+    "displayName": {
+      "type": "string",
+      "description": "User-friendly display name for the action",
+      "required": true
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of what this action does",
+      "required": true
+    },
+    "icon": {
+      "type": "string",
+      "description": "Icon name for UI display of this action",
+      "required": true
+    },
+    "resultingStatus": {
+      "type": "string",
+      "description": "The status that will be applied when this action is taken",
+      "required": true,
+      "relationship": {
+        "edgeType": "results_in",
+        "description": "The status that results from this action"
+      }
+    },
+    "userImpact": {
+      "type": "string",
+      "description": "How this action affects the user account",
+      "required": true,
+      "enum": [
+        "NONE",
+        "WARNING",
+        "TEMPORARY_RESTRICTION",
+        "PERMANENT_RESTRICTION",
+        "SUSPENSION",
+        "BAN"
+      ]
+    },
+    "requiresNote": {
+      "type": "string",
+      "description": "Whether this action requires a moderator note",
+      "required": true,
+      "enum": [
+        "true",
+        "false"
+      ]
+    },
+    "allowContentEdit": {
+      "type": "string",
+      "description": "Whether this action allows editing the original content",
+      "required": true,
+      "enum": [
+        "true",
+        "false"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

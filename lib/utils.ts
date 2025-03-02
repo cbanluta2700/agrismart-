@@ -31,6 +31,16 @@ export function formatPrice(price: number): string {
 }
 
 /**
+ * Format currency amount
+ */
+export function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(amount);
+}
+
+/**
  * Checks if code is running on client side
  */
 export const isClient = typeof window !== 'undefined';
