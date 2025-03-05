@@ -1,154 +1,137 @@
-# Current Active State
-
-## Current Session: March 3, 2025
+# AgriSmart - Active State
 
 ## Current Focus
 
-We have successfully enhanced the database migration system for the AgriSmart platform with improved error handling, better reporting capabilities, and the ability to retry failed conversations. Additionally, we've created a comprehensive mock data generation system for demonstration and testing purposes.
+We are currently focused on enhancing the AgriSmart frontend with a crypto-inspired UI design and improving the authentication system. The landing page and guest layout have been updated with modern design elements including glass effects, gradient backgrounds, and animations using Framer Motion.
 
-### Active Work
-- Implementing a hybrid database architecture for the ChatGPT integration
-- Migrating conversation storage from Vercel KV to MongoDB
-- Maintaining user identity and analytics in PostgreSQL
-- Ensuring proper indexing and performance optimization
-- Implementing database monitoring and migration control systems
+## Recent Changes
 
-### Completed Tasks
-- [x] Implement hybrid database architecture with MongoDB and PostgreSQL
-- [x] Modify Prisma schema to ensure proper validation
-- [x] Create migration scripts for moving data from Vercel KV to MongoDB
-- [x] Implement MongoDB connection pooling
-- [x] Create database performance monitoring utilities
-- [x] Develop comprehensive database migration control system
-- [x] Create admin interface for monitoring and controlling database migrations
-- [x] Enhance database migration system with retry functionality and error handling
-- [x] Create comprehensive mock data generation system for demonstration and testing purposes
-- [x] Enhanced error handling and reporting, including categorized error tracking
-- [x] Created a retry functionality for failed conversations
-- [x] Enhanced the shared migration state to include error summaries and failed conversation tracking
-- [x] Generated realistic mock data for KV conversations and MongoDB collections
-- [x] Created mock API server for simulating the migration process
-- [x] Implemented simulated migrations with various states (running, completed, error, cancelled)
-- [x] Added middleware to intercept API requests and route them to the mock server in demo mode
-- [x] Created documentation and setup scripts for the demo environment
-- [x] Configured Transaction Pooler connection for optimal serverless performance
-- [x] Updated Prisma schema to support connection pooling with `directUrl` for migrations
-- [x] Updated documentation with comprehensive connection options for different deployment scenarios
-- [x] Ensured all environment variables are properly configured for production
+### UI/UX Enhancements
 
-### Current Tasks
-- [ ] Optimize conversation retrieval for large histories
-- [ ] Implement caching for frequent queries
-- [ ] Test the migration system with the mock data to ensure it works as expected
-- [ ] Validate that the retry functionality correctly processes failed conversations
-- [ ] Update user documentation to include information about the enhanced migration system
-- [ ] Create admin guide for using the retry functionality
+- **Crypto-UI Design Integration:** 
+  - Implemented glass card components and modern styling
+  - Added gradient backgrounds and animated sections
+  - Created hero backdrop with modern effects
+  - Enhanced typography with gradient text
+  - Implemented card hover animations and 3D effects
 
-### Open Questions
-1. What monitoring strategy should we use for the hybrid database architecture?
-   - Answer: Created performance monitoring and connection health monitoring utilities for MongoDB and PostgreSQL
-2. Should we implement connection pooling for MongoDB to optimize performance?
-   - Answer: Yes, implemented connection pooling with configurable parameters to enhance performance
-3. Should we implement automatic retry for certain categories of errors?
-4. Would it be beneficial to add email/Slack notifications for migration completion or failures?
+- **Guest Layout Updates:**
+  - Enhanced navigation with modern styling
+  - Created comprehensive footer with multiple sections
+  - Improved mobile responsiveness
+  - Added consistent theming across guest pages
 
-### Recent Decisions
-1. Adopt a hybrid database approach with MongoDB for chat content and PostgreSQL for user identity
-2. Maintain usage analytics in PostgreSQL for easier reporting alongside other user metrics
-3. Use explicit relationship naming in the Prisma schema for the ChatUsage model
-4. Created a migration script for moving existing conversations from Vercel KV to MongoDB
-5. Implemented connection pooling for MongoDB with configurable parameters
-6. Built a comprehensive migration control system with real-time monitoring
-7. Added migration status tracking and management through shared state
-8. Enhanced database migration system with retry functionality and error handling
+- **Landing Page Redesign:**
+  - Implemented modern crypto-inspired UI
+  - Added animated content sections
+  - Created role-specific registration sections
+  - Enhanced visual hierarchy
+  - Ensured responsive design
+
+### Authentication System Updates
+
+- **Authentication Provider:**
+  - Simplified authentication flow with token-based authentication
+  - Implemented localStorage persistence for tokens
+  - Created mock API interactions for development
+  - Added loading states for authentication processes
+  - Removed next-auth dependencies
+  - Enhanced error handling with toast notifications
+
+- **Routing Improvements:**
+  - Created unified root landing page with conditional rendering
+  - Fixed route conflicts between different route groups
+  - Implemented role-based access control with directory structure
+  - Added protection for role-specific routes
+
+## Key Files
+
+- **Frontend Structure:**
+  - `frontend/app/page.tsx`: Root landing page with crypto-UI design
+  - `frontend/app/globals.css`: Global styles with crypto-inspired theme
+  - `frontend/app/(guest)/layout.tsx`: Updated guest layout with modern footer
+  - `frontend/components/auth/auth-provider.tsx`: Enhanced auth provider
+  - `frontend/components/navigation.tsx`: Updated navigation component
+
+- **Authentication:**
+  - `frontend/lib/auth/guards.ts`: Role-based auth guards
+  - `frontend/lib/auth/types.ts`: Authentication type definitions
+  - `frontend/lib/api.ts`: API client for backend communication
+
+## Project Reorganization Plan
+
+We are implementing a comprehensive reorganization of the repository structure to improve code organization, maintainability, and development workflow:
+
+### Directory Structure
+```
+d:\G\snake\gg\agrismart\
+├── frontend/      # Next.js frontend application
+├── backend/       # Node.js/Express backend API
+├── shared/        # Shared code (types, utilities, constants)
+├── memory-bank/   # Project documentation and task tracking
+├── scripts/       # Utility scripts for development and deployment
+└── docs/          # Project documentation
+```
+
+### Reorganization Process
+1. The `reorganize-project.js` script will move files to their appropriate locations
+2. The `fix-imports.js` script will update import paths to match the new structure
+3. Testing will be performed to ensure all components function correctly after reorganization
+
+## CI/CD Implementation
+
+### Current Status
+- Created a manual approach for Travis CI setup since we had issues with the Travis CLI
+- Created a manual-travis-setup.js script that provides step-by-step instructions
+- Updated .travis.yml file with proper test and build commands
+- Configured the deployment to use a Vercel token (to be set in Travis CI settings)
 
 ### Next Steps
-1. Run the migration script to move existing conversations from Vercel KV to MongoDB using the new migration control system
-2. Monitor the migration process and ensure data integrity
-3. Test the hybrid architecture with load testing
-4. Monitor database performance and optimize as needed
-5. Consider optimizing conversation retrieval for large histories
-6. Testing the retry functionality to ensure it works as expected
-7. Potentially adding additional error categorization or recovery options based on feedback
+- Follow the instructions provided by the manual-travis-setup.js script to:
+  1. Set up the Vercel token in Travis CI settings
+  2. Connect Travis CI to the GitHub repository
+  3. Trigger the first build by pushing changes to GitHub
+- Verify that the CI/CD pipeline works correctly
+- Set up monitoring for build failures
 
-## Deployment Preparations
+## Current Challenges
 
-### Current Focus
-**Deployment Preparation**
-- [x] Configure MongoDB for chat storage
-- [x] Set up Supabase for PostgreSQL database
-- [x] Create deployment documentation
-- [x] Implement database connection verification
-- [x] Build deployment scripts
-- [x] Create GitHub Student Pack deployment guide
-- [ ] Deploy to Vercel using Student Pack benefits
-- [ ] Configure custom domain
+- **Authentication Backend Integration:**
+  - The current authentication system uses mock data and localStorage
+  - Need to connect to actual backend API endpoints
+  - Implement proper token refresh mechanism
+  - Add secure token storage
 
-### Last Session Summary:
+- **UI Completeness:**
+  - Need to apply crypto-UI design to login and registration pages
+  - Enhance role-specific dashboards with the new design
+  - Complete responsive design for all pages
 
-Successfully configured both database systems for the AgriSmart platform deployment. For MongoDB, we're using the local MongoDB server which already has the necessary databases set up. For PostgreSQL, we've configured Supabase with project URL and authentication keys. Created and tested database connection verification scripts for both database systems.
+## Next Steps
 
-Key accomplishments:
-- Configured local MongoDB connection (mongodb://localhost:27017)
-- Set up Supabase PostgreSQL configuration (https://eexsqnsutjkaypilduwy.supabase.co)
-- Created test scripts for both database systems
-- Updated deployment documentation with detailed configuration instructions
-- Successfully tested MongoDB connection
-- Added Supabase client library for front-end integration
+### Immediate Tasks:
+1. Execute project reorganization scripts
+2. Complete CI/CD pipeline setup
+3. Implement remaining authentication components
+4. Finish responsive design implementation
+5. Optimize carousel components for better performance
 
-The platform is now ready for deployment to Vercel using the Student Pack benefits, with both database systems properly configured.
+### Upcoming Tasks:
+1. Add comprehensive test coverage
+2. Set up application performance monitoring
+3. Implement secure token storage and refresh mechanism
+4. Configure error tracking
+5. Verify analytics integration
 
-### Next Steps:
-
-1. Test Supabase connection with the actual database password
-2. Deploy the application to Vercel using the Student Pack benefits
-3. Configure the custom domain from Namecheap
-4. Set up monitoring for database usage
-5. Implement automated backups for MongoDB and PostgreSQL
-
-## March 3, 2025 (Additional Updates)
-
-Successfully optimized the Supabase database configuration for serverless deployment on Vercel. We've implemented Supabase's Transaction Pooler and configured the required direct connection for database migrations.
-
-Key accomplishments:
-- Configured Transaction Pooler connection for optimal serverless performance
-- Updated Prisma schema to support connection pooling with `directUrl` for migrations
-- Updated documentation with comprehensive connection options for different deployment scenarios
-- Ensured all environment variables are properly configured for production
-
-Next steps:
-- Deploy the application to Vercel using GitHub Student Pack benefits
-- Configure the custom domain from Namecheap
-- Monitor database performance in production
-- Implement automated backups for both MongoDB and PostgreSQL databases
-
-## March 3, 2025 (CI/CD Setup)
-
-Successfully set up continuous integration and deployment for the AgriSmart platform using Travis CI and Vercel. This setup enables automatic deployments when changes are pushed to the main branch, ensuring a smooth development workflow.
-
-Key accomplishments:
-- Created Travis CI configuration (.travis.yml) for automated testing and deployment
-- Updated Vercel deployment settings in vercel.json
-- Added CI/CD related scripts to package.json
-- Created a deployment script (scripts/deploy.js) for easier manual deployments
-- Documented the complete CI/CD setup process in CI-CD-SETUP.md
-- Created an automated setup script (scripts/setup-travis.js) to streamline the Travis CI configuration process
-- Enhanced deploy.js script to handle conflicting files between the pages/ and app/ directories
-- Successfully built the application by resolving file conflicts
-- Pushed all changes to GitHub repository for CI/CD integration
-- Added Vercel token and project configuration (Project ID: prj_kfV8M6X7bG6dSZgYOOjmVAgAepr8)
-- Created .vercel/project.json with proper configuration
-- Updated Travis CI configuration to use Vercel token and project details
-
-Next steps:
-- Address Cron Job limitations in the Hobby plan (adjust cron schedules to daily frequency)
-- Test the full deployment cycle with Travis CI by pushing a change to GitHub
-- Monitor deployment and verify successful application launch
+### Final Verification:
+1. Test entire application flow
+2. Verify all components in production mode
+3. Check cross-browser compatibility
 
 ## Technical Notes
-- MongoDB provides better scalability for the append-heavy nature of chat data
-- PostgreSQL maintains a single source of truth for user identity
-- Proper indexing is crucial for both databases to ensure performance
-- Environment variables need to be configured for both databases
-- Migration process uses shared state pattern across API routes to maintain consistency
-- Admin dashboard provides visual indicators of migration progress and database health
+
+- Using Next.js 14.1.0 with App Router
+- Authentication currently uses localStorage (temporary solution)
+- UI animations implemented with Framer Motion
+- CSS utilities include clsx and tailwind-merge
+- Icons from lucide-react library

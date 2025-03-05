@@ -15,7 +15,10 @@ before_install:
   - npm i -g vercel
 
 script:
-  - npm run ci
+  - npm run lint
+  - npm run test:frontend
+  - npm run test:backend
+  - npm run build
 
 deploy:
   provider: script
@@ -26,6 +29,6 @@ deploy:
 
 env:
   global:
-    - secure: "YOUR_ENCRYPTED_VERCEL_TOKEN"
+    # VERCEL_TOKEN is set in Travis CI settings
     - VERCEL_PROJECT_ID=prj_kfV8M6X7bG6dSZgYOOjmVAgAepr8
     - VERCEL_ORG_ID=banlutas-projects
