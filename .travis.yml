@@ -13,12 +13,8 @@ branches:
 
 before_install:
   - npm i -g vercel
-  # Set up SSH key
-  - echo "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/id_rsa
-  - chmod 600 ~/.ssh/id_rsa
-  - eval "$(ssh-agent -s)"
-  - ssh-add ~/.ssh/id_rsa
-  - ssh-keyscan github.com >> ~/.ssh/known_hosts
+  # Set up Git with token
+  - git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
   - git config --global user.email "travis@travis-ci.org"
   - git config --global user.name "Travis CI"
 
@@ -37,6 +33,6 @@ deploy:
 
 env:
   global:
-    # VERCEL_TOKEN is set in Travis CI settings
+    # VERCEL_TOKEN and GITHUB_TOKEN are set in Travis CI settings
     - VERCEL_PROJECT_ID=prj_kfV8M6X7bG6dSZgYOOjmVAgAepr8
     - VERCEL_ORG_ID=banlutas-projects
